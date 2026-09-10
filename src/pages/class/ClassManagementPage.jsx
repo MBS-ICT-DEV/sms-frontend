@@ -1,6 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { Button, Modal, PageHeader, LoadingSpinner, EmptyState, Card } from '../../components/common/UIComponents';
+import {
+  Button,
+  Modal,
+  PageHeader,
+  LoadingSpinner,
+  EmptyState,
+  Card,
+} from '../../components/common/UIComponents';
 
 import {
   Search,
@@ -17,25 +24,15 @@ import {
   Layers3,
 } from 'lucide-react';
 
-import {
-  Button,
-  Modal,
-  PageHeader,
-  LoadingSpinner,
-  EmptyState,
-  Card,
-} from '../../components/common/UIComponents';
-
 import MainLayout from '../../layouts/MainLayout';
 import adminAPI from '../../api/admin.api';
 
 export const ClassManagementPage = () => {
+  // --------------------------------------------------
+  // STATE
+  // --------------------------------------------------
+
   const [classes, setClasses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [modal, setModal] = useState(null);
-  const [search, setSearch] = useState('');
   const [sections, setSections] = useState([]);
   const [teachers, setTeachers] = useState([]);
 
@@ -46,18 +43,15 @@ export const ClassManagementPage = () => {
   const [search, setSearch] = useState('');
 
   const [selectedClass, setSelectedClass] = useState(null);
+  const [selectedTeacher, setSelectedTeacher] = useState('');
 
   const [form, setForm] = useState({
     name: '',
     capacity: 30,
-    section: '',
-    subjects: ''
     sectionId: '',
     section: '',
     subjects: '',
   });
-
-  const [selectedTeacher, setSelectedTeacher] = useState('');
 
   // --------------------------------------------------
   // LOAD DATA
@@ -70,22 +64,20 @@ export const ClassManagementPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [classesRes, teachersRes] = await Promise.all([
-        adminAPI.getClasses(),
 
-      const [classesRes, sectionsRes, teachersRes] = await Promise.all([
-        adminAPI.getClasses(),
-        adminAPI.getSections(),
-        adminAPI.getAllTeachers(),
-      ]);
+      const [classesRes, sectionsRes, teachersRes] =
+        await Promise.all([
+          adminAPI.getClasses(),
+          adminAPI.getSections(),
+          adminAPI.getAllTeachers(),
+        ]);
 
-      setClasses(classesRes.data.classes || []);
-      setTeachers(teachersRes.data.teachers || []);
+      setClasses(classesRes?.data?.classes || []);
+      setSections(sectionsRes?.data?.sections || []);
+      setTeachers(teachersRes?.data?.teachers || []);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to load data');
-      setSections(sectionsRes.data.sections || []);
-      setTeachers(teachersRes.data.teachers || []);
-    } catch (error) {
+      console.error('Failed to load class management data:', error);
+
       toast.error(
         error.response?.data?.message ||
           'Failed to load classes'
@@ -95,7 +87,6 @@ export const ClassManagementPage = () => {
     }
   };
 
-  // CREATE CLASS
   // --------------------------------------------------
   // RESET FORM
   // --------------------------------------------------
@@ -122,14 +113,19 @@ export const ClassManagementPage = () => {
   };
 
   // --------------------------------------------------
-  // CREATE CLASS
+  // OPEN CREATE MODAL
   // --------------------------------------------------
 
   const openCreateModal = () => {
     resetForm();
     setSelectedClass(null);
+    setSelectedTeacher('');
     setModal('create');
   };
+
+  // --------------------------------------------------
+  // CREATE CLASS
+  // --------------------------------------------------
 
   const handleCreate = async () => {
     if (!form.name.trim()) {
@@ -137,62 +133,54 @@ export const ClassManagementPage = () => {
       return;
     }
 
+    if (!form.sectionId) {
+      toast.error('Please select a section');
+      return;
+    }
+
+    if (!form.capacity || Number(form.capacity) < 1) {
+      toast.error('Please enter a valid student capacity');
+      return;
+    }
+
     try {
       setSubmitting(true);
 
-      const response = await adminAPI.createClass({
-        name: form.name,
-        capacity: Number(form.capacity),
-        section: form.section,
-        subjects: form.subjects
-          ? form.subjects.split(',').map(s => s.trim())
-          : [],
-      });
+      const subjects = form.subjects
+        ? form.subjects
+            .split(',')
+            .map((subject) => subject.trim())
+            .filter(Boolean)
+        : [];
 
-      toast.success(response.data.message || 'Class created successfully');
-
-      setClasses([...classes, response.data.class]);
-      setModal(null);
-
-      setForm({
-        name: '',
-        capacity: 30,
-        section: '',
-        subjects: ''
-      });
-
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create class');
-      if (!form.sectionId) {
-        toast.error('Please select a section');
-        return;
-      }
-
-      const response = await adminAPI.createClass({
+      const payload = {
         name: form.name.trim(),
         capacity: Number(form.capacity),
         sectionId: form.sectionId,
         section: form.sectionId,
-        subjects: form.subjects
-          ? form.subjects
-              .split(',')
-              .map((subject) => subject.trim())
-              .filter(Boolean)
-          : [],
-      });
+        subjects,
+      };
+
+      const response = await adminAPI.createClass(payload);
+
+      const createdClass = response?.data?.class;
+
+      if (createdClass) {
+        setClasses((prev) => [...prev, createdClass]);
+      } else {
+        // Reload if backend does not return the created class
+        await loadData();
+      }
 
       toast.success(
-        response.data.message ||
+        response?.data?.message ||
           'Class created successfully'
       );
 
-      setClasses((prev) => [
-        ...prev,
-        response.data.class,
-      ]);
-
       closeModal();
     } catch (error) {
+      console.error('Create class error:', error);
+
       toast.error(
         error.response?.data?.message ||
           'Failed to create class'
@@ -202,96 +190,98 @@ export const ClassManagementPage = () => {
     }
   };
 
-  // UPDATE CLASS
   // --------------------------------------------------
-  // EDIT CLASS
+  // OPEN EDIT MODAL
   // --------------------------------------------------
 
   const openEditModal = (cls) => {
     setSelectedClass(cls);
 
+    const sectionId =
+      cls.section?._id ||
+      cls.sectionId ||
+      (typeof cls.section === 'string'
+        ? cls.section
+        : '');
+
+    const subjects = Array.isArray(cls.subjects)
+      ? cls.subjects
+          .map((subject) => {
+            if (typeof subject === 'string') {
+              return subject;
+            }
+
+            return (
+              subject?.name ||
+              subject?.subjectName ||
+              subject?.title ||
+              ''
+            );
+          })
+          .filter(Boolean)
+          .join(', ')
+      : '';
+
     setForm({
       name: cls.name || cls.className || '',
       capacity: cls.capacity || 30,
-      sectionId: cls.section?._id || cls.section || '',
-      section: cls.section?._id || cls.section || '',
-      subjects: cls.subjects
-        ? cls.subjects.join(', ')
-        : '',
+      sectionId,
+      section: sectionId,
+      subjects,
     });
 
     setModal('edit');
   };
 
+  // --------------------------------------------------
+  // UPDATE CLASS
+  // --------------------------------------------------
+
   const handleUpdate = async () => {
-    if (!form.name.trim()) {
-      toast.error('Class name is required');
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-
-      await adminAPI.updateClass(selectedClass._id, {
-        name: form.name,
-        capacity: Number(form.capacity),
-        section: form.section,
-        subjects: form.subjects
-          ? form.subjects.split(',').map(s => s.trim())
-          : [],
-      });
-
-      toast.success('Class updated successfully');
-
-      setClasses(classes.map((c) =>
-        c._id === selectedClass._id
-          ? {
-              ...c,
-              name: form.name,
-              capacity: form.capacity,
-              section: form.section,
-              subjects: form.subjects
-                ? form.subjects.split(',').map(s => s.trim())
-                : [],
-            }
-          : c
-      ));
-
-      setModal(null);
-      setSelectedClass(null);
-
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update class');
     if (!selectedClass?._id) {
       toast.error('No class selected');
       return;
     }
 
+    if (!form.name.trim()) {
+      toast.error('Class name is required');
+      return;
+    }
+
+    if (!form.sectionId) {
+      toast.error('Please select a section');
+      return;
+    }
+
+    if (!form.capacity || Number(form.capacity) < 1) {
+      toast.error('Please enter a valid student capacity');
+      return;
+    }
+
     try {
       setSubmitting(true);
 
-      if (!form.sectionId) {
-        toast.error('Please select a section');
-        return;
-      }
+      const subjects = form.subjects
+        ? form.subjects
+            .split(',')
+            .map((subject) => subject.trim())
+            .filter(Boolean)
+        : [];
 
       const updatedData = {
         name: form.name.trim(),
         capacity: Number(form.capacity),
         sectionId: form.sectionId,
         section: form.sectionId,
-        subjects: form.subjects
-          ? form.subjects
-              .split(',')
-              .map((subject) => subject.trim())
-              .filter(Boolean)
-          : [],
+        subjects,
       };
 
-      await adminAPI.updateClass(
+      const response = await adminAPI.updateClass(
         selectedClass._id,
         updatedData
       );
+
+      const updatedClass = response?.data?.class;
 
       setClasses((prev) =>
         prev.map((cls) =>
@@ -299,17 +289,21 @@ export const ClassManagementPage = () => {
             ? {
                 ...cls,
                 ...updatedData,
+                ...(updatedClass || {}),
               }
             : cls
         )
       );
 
       toast.success(
-        'Class updated successfully'
+        response?.data?.message ||
+          'Class updated successfully'
       );
 
       closeModal();
     } catch (error) {
+      console.error('Update class error:', error);
+
       toast.error(
         error.response?.data?.message ||
           'Failed to update class'
@@ -319,49 +313,32 @@ export const ClassManagementPage = () => {
     }
   };
 
-  // DELETE
-  const handleDelete = async (classId) => {
-    if (!window.confirm('Are you sure you want to delete this class?')) return;
-
-    try {
-      await adminAPI.deleteClass(classId);
-      setClasses(classes.filter((c) => c._id !== classId));
-      toast.success('Class deleted successfully');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete class');
-    }
-  };
-
-  // ASSIGN TEACHER
-  const handleAssignTeacher = async () => {
-    if (!selectedTeacher) {
-      toast.error('Please select a teacher');
   // --------------------------------------------------
   // DELETE CLASS
   // --------------------------------------------------
 
   const handleDelete = async (classId) => {
-    if (
-      !window.confirm(
-        'Are you sure you want to delete this class?'
-      )
-    ) {
-      return;
-    }
+    if (!classId) return;
+
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this class?'
+    );
+
+    if (!confirmed) return;
 
     try {
       await adminAPI.deleteClass(classId);
 
       setClasses((prev) =>
-        prev.filter(
-          (cls) => cls._id !== classId
-        )
+        prev.filter((cls) => cls._id !== classId)
       );
 
       toast.success(
         'Class deleted successfully'
       );
     } catch (error) {
+      console.error('Delete class error:', error);
+
       toast.error(
         error.response?.data?.message ||
           'Failed to delete class'
@@ -370,78 +347,77 @@ export const ClassManagementPage = () => {
   };
 
   // --------------------------------------------------
-  // ASSIGN TEACHER
+  // OPEN ASSIGN TEACHER MODAL
   // --------------------------------------------------
 
   const openAssignTeacherModal = (cls) => {
     setSelectedClass(cls);
 
     setSelectedTeacher(
-      cls.classTeacher?._id || ''
+      cls.classTeacher?._id ||
+        cls.classTeacher?.id ||
+        ''
     );
 
     setModal('assign-teacher');
   };
 
-  const handleAssignTeacher = async () => {
-    if (!selectedTeacher) {
-      toast.error(
-        'Please select a teacher'
-      );
+  // --------------------------------------------------
+  // ASSIGN TEACHER
+  // --------------------------------------------------
 
+  const handleAssignTeacher = async () => {
+    if (!selectedClass?._id) {
+      toast.error('No class selected');
       return;
     }
 
-    if (!selectedClass?._id) {
-      toast.error('No class selected');
+    if (!selectedTeacher) {
+      toast.error('Please select a teacher');
       return;
     }
 
     try {
       setSubmitting(true);
 
-      await adminAPI.assignTeacherToClass({
-        classId: selectedClass._id,
-        teacherId: selectedTeacher,
-      });
+      const response =
+        await adminAPI.assignTeacherToClass({
+          classId: selectedClass._id,
+          teacherId: selectedTeacher,
+        });
 
-      const teacher = teachers.find(t => t._id === selectedTeacher);
-
-      setClasses(classes.map(c =>
-        c._id === selectedClass._id
-          ? { ...c, classTeacher: teacher }
-          : c
-      ));
-
-      toast.success('Teacher assigned successfully');
-
-      setModal(null);
-      setSelectedClass(null);
-      setSelectedTeacher('');
-
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to assign teacher');
       const teacher = teachers.find(
-        (t) => t._id === selectedTeacher
+        (item) => item._id === selectedTeacher
       );
+
+      const assignedTeacher =
+        response?.data?.classTeacher ||
+        response?.data?.teacher ||
+        teacher;
 
       setClasses((prev) =>
         prev.map((cls) =>
           cls._id === selectedClass._id
             ? {
                 ...cls,
-                classTeacher: teacher,
+                classTeacher: assignedTeacher,
               }
             : cls
         )
       );
 
       toast.success(
-        'Teacher assigned successfully'
+        response?.data?.message ||
+          'Teacher assigned successfully'
       );
 
       closeModal();
     } catch (error) {
+      console.error(
+        'Assign teacher error:',
+        error
+      );
+
       toast.error(
         error.response?.data?.message ||
           'Failed to assign teacher'
@@ -451,42 +427,8 @@ export const ClassManagementPage = () => {
     }
   };
 
-  const openEditModal = (cls) => {
-    setSelectedClass(cls);
-
-    setForm({
-      name: cls.name || cls.className || '',
-      capacity: cls.capacity || 30,
-      section: cls.section || '',
-      subjects: cls.subjects ? cls.subjects.join(', ') : '',
-    });
-
-    setModal('edit');
-  };
-
-  const openAssignTeacherModal = (cls) => {
-    setSelectedClass(cls);
-    setSelectedTeacher(cls.classTeacher?._id || '');
-    setModal('assign-teacher');
-  };
-
-  // FILTER
-  const filtered = classes.filter((c) => {
-    const name = (c.name || c.className || '').toLowerCase();
-    const section = (c.section || '').toLowerCase();
-    const teacher = (c.classTeacher?.fullname || '').toLowerCase();
-    const q = search.toLowerCase();
-
-    return name.includes(q) || section.includes(q) || teacher.includes(q);
-  });
-
-  if (loading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-screen">
-          <LoadingSpinner size="lg" dark />
   // --------------------------------------------------
-  // SEARCH
+  // SEARCH / FILTER
   // --------------------------------------------------
 
   const filtered = classes.filter((cls) => {
@@ -497,11 +439,16 @@ export const ClassManagementPage = () => {
     ).toLowerCase();
 
     const section = (
-      cls.section?.name || cls.section || ''
+      cls.section?.name ||
+      cls.section?.code ||
+      cls.section ||
+      ''
     ).toLowerCase();
 
     const teacher = (
-      cls.classTeacher?.fullname || ''
+      cls.classTeacher?.fullname ||
+      cls.classTeacher?.name ||
+      ''
     ).toLowerCase();
 
     const query = search
@@ -532,157 +479,6 @@ export const ClassManagementPage = () => {
     );
   }
 
-  return (
-    <MainLayout>
-      <PageHeader
-        title="Class Management"
-        subtitle="Create and manage school classes"
-        action={
-          <Button
-            onClick={() => {
-              setModal('create');
-              setForm({ name: '', capacity: 30, section: '', subjects: '' });
-            }}
-          >
-            ➕ Create Class
-          </Button>
-        }
-      />
-
-      {/* SEARCH */}
-      <input
-        className="sms-input mb-4"
-        placeholder="Search classes..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-
-      {/* LIST */}
-      {filtered.length === 0 ? (
-        <Card>
-          <EmptyState icon="📚" text="No classes found" />
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {filtered.map((cls) => (
-            <div key={cls._id} className="sms-card p-4">
-              <h2 className="font-bold text-lg">
-                {cls.name || cls.className}
-              </h2>
-
-              <p className="text-sm">
-                👨‍🏫 {cls.classTeacher?.fullname || 'Not assigned'}
-              </p>
-
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" onClick={() => openAssignTeacherModal(cls)}>
-                  Assign
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => openEditModal(cls)}>
-                  Edit
-                </Button>
-                <Button size="sm" variant="danger" onClick={() => handleDelete(cls._id)}>
-                  Delete
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* CREATE / EDIT MODAL */}
-      <Modal
-        isOpen={modal === 'create' || modal === 'edit'}
-        onClose={() => setModal(null)}
-        title={modal === 'create' ? 'Create Class' : 'Edit Class'}
-      >
-        <input
-          className="sms-input"
-          placeholder="Class name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-
-        <input
-          className="sms-input mt-2"
-          placeholder="Section"
-          value={form.section}
-          onChange={(e) => setForm({ ...form, section: e.target.value })}
-        />
-
-        <input
-          className="sms-input mt-2"
-          type="number"
-          value={form.capacity}
-          onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-        />
-
-        <input
-          className="sms-input mt-2"
-          placeholder="Subjects"
-          value={form.subjects}
-          onChange={(e) => setForm({ ...form, subjects: e.target.value })}
-        />
-
-        <Button
-          className="mt-3 w-full"
-          disabled={submitting}
-          onClick={modal === 'create' ? handleCreate : handleUpdate}
-        >
-          {modal === 'create' ? 'Create' : 'Update'}
-        </Button>
-      </Modal>
-
-      {/* ✅ ASSIGN TEACHER MODAL (ADDED FIX) */}
-      <Modal
-        isOpen={modal === 'assign-teacher'}
-        onClose={() => {
-          setModal(null);
-          setSelectedClass(null);
-          setSelectedTeacher('');
-        }}
-        title={`Assign Teacher - ${selectedClass?.name || selectedClass?.className}`}
-      >
-        <div className="sms-form-group">
-          <label className="sms-label">Select Teacher</label>
-
-          <select
-            className="sms-input"
-            value={selectedTeacher}
-            onChange={(e) => setSelectedTeacher(e.target.value)}
-          >
-            <option value="">-- Select Teacher --</option>
-
-            {teachers.map((t) => (
-              <option key={t._id} value={t._id}>
-                {t.fullname} {t.subject ? `(${t.subject})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex gap-2 mt-4">
-          <Button
-            variant="ghost"
-            className="flex-1"
-            onClick={() => {
-              setModal(null);
-              setSelectedClass(null);
-              setSelectedTeacher('');
-            }}
-          >
-            Cancel
-          </Button>
-
-          <Button
-            className="flex-1"
-            disabled={submitting}
-            onClick={handleAssignTeacher}
-          >
-            {submitting ? <LoadingSpinner size="sm" /> : 'Assign Teacher'}
-          </Button>
-        </div>
-      </Modal>
   // --------------------------------------------------
   // PAGE
   // --------------------------------------------------
@@ -827,7 +623,7 @@ export const ClassManagementPage = () => {
             </div>
           </div>
 
-          {/* TEACHERS */}
+          {/* AVAILABLE TEACHERS */}
 
           <div className="
             bg-white
@@ -983,9 +779,7 @@ export const ClassManagementPage = () => {
               {!search && (
                 <div className="flex justify-center mt-5">
                   <Button
-                    onClick={
-                      openCreateModal
-                    }
+                    onClick={openCreateModal}
                   >
                     <span className="flex items-center gap-2">
                       <Plus size={16} />
@@ -1016,10 +810,21 @@ export const ClassManagementPage = () => {
                 'Unnamed Class';
 
               const subjects =
-                cls.subjects || [];
+                Array.isArray(cls.subjects)
+                  ? cls.subjects
+                  : [];
 
               const capacity =
                 Number(cls.capacity) || 30;
+
+              const sectionName =
+                cls.section?.name ||
+                cls.section?.code ||
+                (
+                  typeof cls.section === 'string'
+                    ? cls.section
+                    : ''
+                );
 
               return (
                 <div
@@ -1086,8 +891,8 @@ export const ClassManagementPage = () => {
                             text-slate-400
                             mt-0.5
                           ">
-                            {cls.section?.name || cls.section
-                              ? `Section ${cls.section?.name || cls.section}`
+                            {sectionName
+                              ? `Section ${sectionName}`
                               : 'General section'}
                           </p>
 
@@ -1154,6 +959,7 @@ export const ClassManagementPage = () => {
                           mt-0.5
                         ">
                           {cls.classTeacher?.fullname ||
+                            cls.classTeacher?.name ||
                             'Not assigned'}
                         </p>
 
@@ -1169,6 +975,8 @@ export const ClassManagementPage = () => {
                       gap-3
                       mt-4
                     ">
+
+                      {/* CAPACITY */}
 
                       <div className="
                         p-3
@@ -1208,6 +1016,8 @@ export const ClassManagementPage = () => {
                         </p>
 
                       </div>
+
+                      {/* SUBJECTS */}
 
                       <div className="
                         p-3
@@ -1250,7 +1060,7 @@ export const ClassManagementPage = () => {
 
                     </div>
 
-                    {/* SUBJECTS */}
+                    {/* SUBJECT LIST */}
 
                     {subjects.length > 0 && (
                       <div className="mt-4">
@@ -1275,24 +1085,32 @@ export const ClassManagementPage = () => {
                           {subjects
                             .slice(0, 4)
                             .map(
-                              (
-                                subject,
-                                index
-                              ) => (
-                                <span
-                                  key={`${subject}-${index}`}
-                                  className="
-                                    px-2.5 py-1
-                                    rounded-lg
-                                    bg-blue-50
-                                    text-blue-700
-                                    text-[10px]
-                                    font-semibold
-                                  "
-                                >
-                                  {subject}
-                                </span>
-                              )
+                              (subject, index) => {
+
+                                const subjectName =
+                                  typeof subject === 'string'
+                                    ? subject
+                                    : subject?.name ||
+                                      subject?.subjectName ||
+                                      subject?.title ||
+                                      'Subject';
+
+                                return (
+                                  <span
+                                    key={`${subjectName}-${index}`}
+                                    className="
+                                      px-2.5 py-1
+                                      rounded-lg
+                                      bg-blue-50
+                                      text-blue-700
+                                      text-[10px]
+                                      font-semibold
+                                    "
+                                  >
+                                    {subjectName}
+                                  </span>
+                                );
+                              }
                             )}
 
                           {subjects.length > 4 && (
@@ -1328,12 +1146,12 @@ export const ClassManagementPage = () => {
                     gap-2
                   ">
 
+                    {/* ASSIGN */}
+
                     <button
                       type="button"
                       onClick={() =>
-                        openAssignTeacherModal(
-                          cls
-                        )
+                        openAssignTeacherModal(cls)
                       }
                       className="
                         flex-1
@@ -1354,6 +1172,8 @@ export const ClassManagementPage = () => {
                       <UserPlus size={14} />
                       Assign
                     </button>
+
+                    {/* EDIT */}
 
                     <button
                       type="button"
@@ -1380,12 +1200,12 @@ export const ClassManagementPage = () => {
                       <Pencil size={15} />
                     </button>
 
+                    {/* DELETE */}
+
                     <button
                       type="button"
                       onClick={() =>
-                        handleDelete(
-                          cls._id
-                        )
+                        handleDelete(cls._id)
                       }
                       className="
                         w-9 h-9
@@ -1420,468 +1240,521 @@ export const ClassManagementPage = () => {
 
       {/* ==================================================
           CREATE / EDIT MODAL
+      ================================================== */}
 
-     {/* CREATE / EDIT MODAL */}
-<Modal
-  isOpen={modal === 'create' || modal === 'edit'}
-  onClose={closeModal}
-  title={
-    modal === 'create'
-      ? 'Create Academic Class'
-      : 'Edit Academic Class'
-  }
->
-  <div className="space-y-5">
-
-    {/* INTRO */}
-    <div className="
-      flex
-      items-center
-      gap-3
-      p-4
-      rounded-xl
-      bg-blue-50
-      border
-      border-blue-100
-    ">
-      <div className="
-        w-10
-        h-10
-        rounded-xl
-        bg-white
-        text-blue-600
-        flex
-        items-center
-        justify-center
-      ">
-        {modal === 'create' ? (
-          <Plus size={19} />
-        ) : (
-          <Pencil size={18} />
-        )}
-      </div>
-
-      <div>
-        <p className="
-          text-sm
-          font-bold
-          text-blue-900
-        ">
-          {modal === 'create'
-            ? 'Add a new class'
-            : 'Update class information'}
-        </p>
-
-        <p className="
-          text-xs
-          text-blue-600
-          mt-0.5
-        ">
-          Enter the academic class details below.
-        </p>
-      </div>
-    </div>
-
-    {/* CLASS NAME */}
-    <div>
-      <label className="
-        block
-        text-xs
-        font-semibold
-        text-slate-600
-        mb-1.5
-      ">
-        Class Name
-      </label>
-
-      <input
-        autoFocus
-        type="text"
-        placeholder="e.g. JSS 1"
-        value={form.name}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            name: e.target.value,
-          })
+      <Modal
+        isOpen={
+          modal === 'create' ||
+          modal === 'edit'
         }
-        className="
-          w-full
-          h-11
-          px-3.5
-          rounded-xl
-          border
-          border-slate-200
-          bg-slate-50
-          text-sm
-          text-slate-700
-          placeholder:text-slate-400
-          outline-none
-          transition
-          focus:bg-white
-          focus:border-blue-500
-          focus:ring-4
-          focus:ring-blue-50
-        "
-      />
-    </div>
-
-    {/* SECTION */}
-    <div>
-      <label className="
-        block
-        text-xs
-        font-semibold
-        text-slate-600
-        mb-1.5
-      ">
-        Section
-      </label>
-
-      <select
-        value={form.sectionId}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            sectionId: e.target.value,
-            section: e.target.value,
-          })
-        }
-        className="
-          w-full
-          h-11
-          px-3.5
-          rounded-xl
-          border
-          border-slate-200
-          bg-slate-50
-          text-sm
-          text-slate-700
-          outline-none
-          transition
-          focus:bg-white
-          focus:border-blue-500
-          focus:ring-4
-          focus:ring-blue-50
-        "
-      >
-        <option value="">Select a section</option>
-        {sections.map((section) => (
-          <option key={section._id} value={section._id}>
-            {section.name} ({section.code})
-          </option>
-        ))}
-      </select>
-    </div>
-
-    {/* CAPACITY */}
-    <div>
-      <label className="
-        block
-        text-xs
-        font-semibold
-        text-slate-600
-        mb-1.5
-      ">
-        Student Capacity
-      </label>
-
-      <input
-        type="number"
-        min="1"
-        value={form.capacity}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            capacity: e.target.value,
-          })
-        }
-        className="
-          w-full
-          h-11
-          px-3.5
-          rounded-xl
-          border
-          border-slate-200
-          bg-slate-50
-          text-sm
-          text-slate-700
-          outline-none
-          transition
-          focus:bg-white
-          focus:border-blue-500
-          focus:ring-4
-          focus:ring-blue-50
-        "
-      />
-    </div>
-
-    {/* SUBJECTS */}
-    <div>
-      <label className="
-        block
-        text-xs
-        font-semibold
-        text-slate-600
-        mb-1.5
-      ">
-        Subjects
-      </label>
-
-      <input
-        type="text"
-        placeholder="Mathematics, English, Biology"
-        value={form.subjects}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            subjects: e.target.value,
-          })
-        }
-        className="
-          w-full
-          h-11
-          px-3.5
-          rounded-xl
-          border
-          border-slate-200
-          bg-slate-50
-          text-sm
-          text-slate-700
-          placeholder:text-slate-400
-          outline-none
-          transition
-          focus:bg-white
-          focus:border-blue-500
-          focus:ring-4
-          focus:ring-blue-50
-        "
-      />
-
-      <p className="
-        mt-1.5
-        text-[10px]
-        text-slate-400
-      ">
-        Separate subjects with commas.
-      </p>
-    </div>
-
-    {/* ACTIONS */}
-    <div className="
-      flex
-      gap-3
-      pt-2
-    ">
-      <button
-        type="button"
-        onClick={closeModal}
-        disabled={submitting}
-        className="
-          flex-1
-          h-11
-          rounded-xl
-          border
-          border-slate-200
-          bg-white
-          text-sm
-          font-semibold
-          text-slate-600
-          hover:bg-slate-50
-          transition
-          disabled:opacity-50
-        "
-      >
-        Cancel
-      </button>
-
-      <Button
-        className="flex-1"
-        disabled={submitting}
-        onClick={
+        onClose={closeModal}
+        title={
           modal === 'create'
-            ? handleCreate
-            : handleUpdate
+            ? 'Create Academic Class'
+            : 'Edit Academic Class'
         }
       >
-        {submitting ? (
-          <LoadingSpinner size="sm" />
-        ) : (
-          <span className="
+        <div className="space-y-5">
+
+          {/* INTRO */}
+
+          <div className="
             flex
             items-center
-            justify-center
-            gap-2
+            gap-3
+            p-4
+            rounded-xl
+            bg-blue-50
+            border
+            border-blue-100
           ">
-            {modal === 'create' ? (
-              <Plus size={16} />
-            ) : (
-              <Pencil size={16} />
-            )}
 
-            {modal === 'create'
-              ? 'Create Class'
-              : 'Save Changes'}
-          </span>
-        )}
-      </Button>
-    </div>
+            <div className="
+              w-10
+              h-10
+              rounded-xl
+              bg-white
+              text-blue-600
+              flex
+              items-center
+              justify-center
+            ">
+              {modal === 'create' ? (
+                <Plus size={19} />
+              ) : (
+                <Pencil size={18} />
+              )}
+            </div>
 
-  </div>
-</Modal>
+            <div>
+              <p className="
+                text-sm
+                font-bold
+                text-blue-900
+              ">
+                {modal === 'create'
+                  ? 'Add a new class'
+                  : 'Update class information'}
+              </p>
 
+              <p className="
+                text-xs
+                text-blue-600
+                mt-0.5
+              ">
+                Enter the academic class details below.
+              </p>
+            </div>
 
-{/* ASSIGN TEACHER MODAL */}
-<Modal
-  isOpen={modal === 'assign-teacher'}
-  onClose={closeModal}
-  title="Assign Class Teacher"
->
-  <div className="space-y-5">
+          </div>
 
-    <div className="
-      flex
-      items-center
-      gap-3
-      p-4
-      rounded-xl
-      bg-blue-50
-      border
-      border-blue-100
-    ">
-      <div className="
-        w-10
-        h-10
-        rounded-xl
-        bg-white
-        text-blue-600
-        flex
-        items-center
-        justify-center
-      ">
-        <BookOpen size={18} />
-      </div>
+          {/* CLASS NAME */}
 
-      <div>
-        <p className="
-          text-[10px]
-          font-bold
-          uppercase
-          tracking-wide
-          text-blue-500
-        ">
-          Class
-        </p>
+          <div>
+            <label className="
+              block
+              text-xs
+              font-semibold
+              text-slate-600
+              mb-1.5
+            ">
+              Class Name
+            </label>
 
-        <p className="
-          text-sm
-          font-bold
-          text-blue-900
-        ">
-          {selectedClass?.name ||
-            selectedClass?.className}
-        </p>
-      </div>
-    </div>
+            <input
+              autoFocus
+              type="text"
+              placeholder="e.g. JSS 1"
+              value={form.name}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  name: e.target.value,
+                }))
+              }
+              className="
+                w-full
+                h-11
+                px-3.5
+                rounded-xl
+                border
+                border-slate-200
+                bg-slate-50
+                text-sm
+                text-slate-700
+                placeholder:text-slate-400
+                outline-none
+                transition
+                focus:bg-white
+                focus:border-blue-500
+                focus:ring-4
+                focus:ring-blue-50
+              "
+            />
+          </div>
 
-    <div>
-      <label className="
-        block
-        text-xs
-        font-semibold
-        text-slate-600
-        mb-1.5
-      ">
-        Select Class Teacher
-      </label>
+          {/* SECTION */}
 
-      <select
-        value={selectedTeacher}
-        onChange={(e) =>
-          setSelectedTeacher(e.target.value)
-        }
-        className="
-          w-full
-          h-11
-          px-3.5
-          rounded-xl
-          border
-          border-slate-200
-          bg-slate-50
-          text-sm
-          text-slate-700
-          outline-none
-          transition
-          focus:bg-white
-          focus:border-blue-500
-          focus:ring-4
-          focus:ring-blue-50
-        "
+          <div>
+            <label className="
+              block
+              text-xs
+              font-semibold
+              text-slate-600
+              mb-1.5
+            ">
+              Section
+            </label>
+
+            <select
+              value={form.sectionId}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  sectionId: e.target.value,
+                  section: e.target.value,
+                }))
+              }
+              className="
+                w-full
+                h-11
+                px-3.5
+                rounded-xl
+                border
+                border-slate-200
+                bg-slate-50
+                text-sm
+                text-slate-700
+                outline-none
+                transition
+                focus:bg-white
+                focus:border-blue-500
+                focus:ring-4
+                focus:ring-blue-50
+              "
+            >
+              <option value="">
+                Select a section
+              </option>
+
+              {sections.map((section) => (
+                <option
+                  key={section._id}
+                  value={section._id}
+                >
+                  {section.name}
+                  {section.code
+                    ? ` (${section.code})`
+                    : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* CAPACITY */}
+
+          <div>
+            <label className="
+              block
+              text-xs
+              font-semibold
+              text-slate-600
+              mb-1.5
+            ">
+              Student Capacity
+            </label>
+
+            <input
+              type="number"
+              min="1"
+              value={form.capacity}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  capacity: e.target.value,
+                }))
+              }
+              className="
+                w-full
+                h-11
+                px-3.5
+                rounded-xl
+                border
+                border-slate-200
+                bg-slate-50
+                text-sm
+                text-slate-700
+                outline-none
+                transition
+                focus:bg-white
+                focus:border-blue-500
+                focus:ring-4
+                focus:ring-blue-50
+              "
+            />
+          </div>
+
+          {/* SUBJECTS */}
+
+          <div>
+            <label className="
+              block
+              text-xs
+              font-semibold
+              text-slate-600
+              mb-1.5
+            ">
+              Subjects
+            </label>
+
+            <input
+              type="text"
+              placeholder="Mathematics, English, Biology"
+              value={form.subjects}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  subjects: e.target.value,
+                }))
+              }
+              className="
+                w-full
+                h-11
+                px-3.5
+                rounded-xl
+                border
+                border-slate-200
+                bg-slate-50
+                text-sm
+                text-slate-700
+                placeholder:text-slate-400
+                outline-none
+                transition
+                focus:bg-white
+                focus:border-blue-500
+                focus:ring-4
+                focus:ring-blue-50
+              "
+            />
+
+            <p className="
+              mt-1.5
+              text-[10px]
+              text-slate-400
+            ">
+              Separate subjects with commas.
+            </p>
+          </div>
+
+          {/* ACTIONS */}
+
+          <div className="
+            flex
+            gap-3
+            pt-2
+          ">
+
+            <button
+              type="button"
+              onClick={closeModal}
+              disabled={submitting}
+              className="
+                flex-1
+                h-11
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                text-sm
+                font-semibold
+                text-slate-600
+                hover:bg-slate-50
+                transition
+                disabled:opacity-50
+              "
+            >
+              Cancel
+            </button>
+
+            <Button
+              className="flex-1"
+              disabled={submitting}
+              onClick={
+                modal === 'create'
+                  ? handleCreate
+                  : handleUpdate
+              }
+            >
+              {submitting ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <span className="
+                  flex
+                  items-center
+                  justify-center
+                  gap-2
+                ">
+                  {modal === 'create' ? (
+                    <Plus size={16} />
+                  ) : (
+                    <Pencil size={16} />
+                  )}
+
+                  {modal === 'create'
+                    ? 'Create Class'
+                    : 'Save Changes'}
+                </span>
+              )}
+            </Button>
+
+          </div>
+
+        </div>
+      </Modal>
+
+      {/* ==================================================
+          ASSIGN TEACHER MODAL
+      ================================================== */}
+
+      <Modal
+        isOpen={modal === 'assign-teacher'}
+        onClose={closeModal}
+        title="Assign Class Teacher"
       >
-        <option value="">
-          Select a teacher
-        </option>
+        <div className="space-y-5">
 
-        {teachers.map((teacher) => (
-          <option
-            key={teacher._id}
-            value={teacher._id}
-          >
-            {teacher.fullname}
-          </option>
-        ))}
-      </select>
-    </div>
+          {/* CLASS INFO */}
 
-    <div className="
-      flex
-      gap-3
-      pt-2
-    ">
-      <button
-        type="button"
-        onClick={closeModal}
-        disabled={submitting}
-        className="
-          flex-1
-          h-11
-          rounded-xl
-          border
-          border-slate-200
-          bg-white
-          text-sm
-          font-semibold
-          text-slate-600
-          hover:bg-slate-50
-          transition
-        "
-      >
-        Cancel
-      </button>
-
-      <Button
-        className="flex-1"
-        disabled={submitting}
-        onClick={handleAssignTeacher}
-      >
-        {submitting ? (
-          <LoadingSpinner size="sm" />
-        ) : (
-          <span className="
+          <div className="
             flex
             items-center
-            justify-center
-            gap-2
+            gap-3
+            p-4
+            rounded-xl
+            bg-blue-50
+            border
+            border-blue-100
           ">
-            <UserCheck size={16} />
-            Assign Teacher
-          </span>
-        )}
-      </Button>
-    </div>
 
-  </div>
-</Modal>
+            <div className="
+              w-10
+              h-10
+              rounded-xl
+              bg-white
+              text-blue-600
+              flex
+              items-center
+              justify-center
+            ">
+              <BookOpen size={18} />
+            </div>
+
+            <div>
+
+              <p className="
+                text-[10px]
+                font-bold
+                uppercase
+                tracking-wide
+                text-blue-500
+              ">
+                Class
+              </p>
+
+              <p className="
+                text-sm
+                font-bold
+                text-blue-900
+              ">
+                {selectedClass?.name ||
+                  selectedClass?.className ||
+                  'Selected Class'}
+              </p>
+
+            </div>
+
+          </div>
+
+          {/* TEACHER SELECT */}
+
+          <div>
+
+            <label className="
+              block
+              text-xs
+              font-semibold
+              text-slate-600
+              mb-1.5
+            ">
+              Select Class Teacher
+            </label>
+
+            <select
+              value={selectedTeacher}
+              onChange={(e) =>
+                setSelectedTeacher(
+                  e.target.value
+                )
+              }
+              className="
+                w-full
+                h-11
+                px-3.5
+                rounded-xl
+                border
+                border-slate-200
+                bg-slate-50
+                text-sm
+                text-slate-700
+                outline-none
+                transition
+                focus:bg-white
+                focus:border-blue-500
+                focus:ring-4
+                focus:ring-blue-50
+              "
+            >
+
+              <option value="">
+                Select a teacher
+              </option>
+
+              {teachers.map((teacher) => (
+                <option
+                  key={teacher._id}
+                  value={teacher._id}
+                >
+                  {teacher.fullname ||
+                    teacher.name ||
+                    `${teacher.firstName || ''} ${
+                      teacher.lastName || ''
+                    }`.trim() ||
+                    'Unnamed Teacher'}
+
+                  {teacher.subject
+                    ? ` (${teacher.subject})`
+                    : ''}
+                </option>
+              ))}
+
+            </select>
+
+          </div>
+
+          {/* ACTIONS */}
+
+          <div className="
+            flex
+            gap-3
+            pt-2
+          ">
+
+            <button
+              type="button"
+              onClick={closeModal}
+              disabled={submitting}
+              className="
+                flex-1
+                h-11
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                text-sm
+                font-semibold
+                text-slate-600
+                hover:bg-slate-50
+                transition
+                disabled:opacity-50
+              "
+            >
+              Cancel
+            </button>
+
+            <Button
+              className="flex-1"
+              disabled={submitting}
+              onClick={handleAssignTeacher}
+            >
+              {submitting ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <span className="
+                  flex
+                  items-center
+                  justify-center
+                  gap-2
+                ">
+                  <UserCheck size={16} />
+                  Assign Teacher
+                </span>
+              )}
+            </Button>
+
+          </div>
+
+        </div>
+      </Modal>
 
     </MainLayout>
   );

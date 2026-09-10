@@ -17,7 +17,10 @@ import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 
 const HoaAttendacHistory = () => {
-  // Get today's date in local time
+  // =========================================================
+  // TODAY
+  // =========================================================
+
   const today = () => {
     const d = new Date();
 
@@ -28,17 +31,23 @@ const HoaAttendacHistory = () => {
     return `${year}-${month}-${day}`;
   };
 
+  // =========================================================
+  // STATE
+  // =========================================================
+
   const [classId, setClassId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [classes, setClasses] = useState([]);
+
   const [date, setDate] = useState(today());
 
-  // MODAL
+  // Modal
   const [selectedDay, setSelectedDay] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // SEARCH INSIDE MODAL
+  // Search inside modal
   const [searchTerm, setSearchTerm] = useState("");
 
   // =========================================================
@@ -65,20 +74,17 @@ const HoaAttendacHistory = () => {
   }, []);
 
   // =========================================================
-  // FETCH ATTENDANCE
+  // FETCH ATTENDANCE HISTORY
   // =========================================================
 
   const fetchData = async (
     selectedClassId = classId,
     selectedDate = date
   ) => {
-    console.log(
-      "fetchData called with:",
-      selectedClassId,
-      selectedDate
-    );
-
-    if (!selectedClassId) return;
+    if (!selectedClassId) {
+      toast.warning("Please select a class");
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -91,37 +97,39 @@ const HoaAttendacHistory = () => {
 
       console.log("Attendance response:", data);
 
-      // Backend returns records in data.data
+      // Backend returns records inside data.data
       const records = Array.isArray(data?.data)
         ? data.data
         : [];
 
-      console.log("ATTENDANCE RECORDS:", records);
+      console.log("Attendance records:", records);
 
       if (records.length > 0) {
         const historyItem = {
           date: selectedDate,
 
           total:
-            data?.summary?.total ||
+            data?.summary?.total ??
             records.length,
 
           present:
-            data?.summary?.present || 0,
+            data?.summary?.present ?? 0,
 
           absent:
-            data?.summary?.absent || 0,
+            data?.summary?.absent ?? 0,
 
           leave:
-            data?.summary?.leave || 0,
+            data?.summary?.leave ?? 0,
 
           percentage:
-            data?.summary?.percentage || 0,
+            data?.summary?.percentage ?? 0,
 
           records,
         };
 
-        setAttendanceHistory([historyItem]);
+        setAttendanceHistory([
+          historyItem,
+        ]);
       } else {
         setAttendanceHistory([]);
       }
@@ -146,40 +154,50 @@ const HoaAttendacHistory = () => {
   // CLASS CHANGE
   // =========================================================
 
-  const handleClassChange = (selectedClassId) => {
-    console.log(
-      "Class changed:",
-      selectedClassId
-    );
-
+  const handleClassChange = (
+    selectedClassId
+  ) => {
     setClassId(selectedClassId);
     setAttendanceHistory([]);
 
-    // Close modal if another class is selected
+    // Close modal
     setIsModalOpen(false);
     setSelectedDay(null);
+    setSearchTerm("");
 
-    if (!selectedClassId) return;
+    if (!selectedClassId) {
+      return;
+    }
 
-    fetchData(selectedClassId, date);
+    fetchData(
+      selectedClassId,
+      date
+    );
   };
 
   // =========================================================
   // DATE CHANGE
   // =========================================================
 
-  const handleDateChange = (e) => {
-    const selectedDate = e.target.value;
+  const handleDateChange = (event) => {
+    const selectedDate =
+      event.target.value;
 
     setDate(selectedDate);
     setAttendanceHistory([]);
 
     setIsModalOpen(false);
     setSelectedDay(null);
+    setSearchTerm("");
 
-    if (!classId || !selectedDate) return;
+    if (!classId || !selectedDate) {
+      return;
+    }
 
-    fetchData(classId, selectedDate);
+    fetchData(
+      classId,
+      selectedDate
+    );
   };
 
   // =========================================================
@@ -193,7 +211,7 @@ const HoaAttendacHistory = () => {
   };
 
   // =========================================================
-  // CLOSE MODAL
+  // CLOSE ATTENDANCE MODAL
   // =========================================================
 
   const closeAttendanceModal = () => {
@@ -207,19 +225,24 @@ const HoaAttendacHistory = () => {
   // =========================================================
 
   const getStudentName = (student) => {
-    if (!student) return "Unknown Student";
+    if (!student) {
+      return "Unknown Student";
+    }
 
     if (typeof student === "string") {
       return student;
     }
 
+    const fullName =
+      `${student.firstName || ""} ${
+        student.lastName || ""
+      }`.trim();
+
     return (
       student.fullname ||
       student.fullName ||
       student.name ||
-      `${student.firstName || ""} ${
-        student.lastName || ""
-      }`.trim() ||
+      fullName ||
       "Unknown Student"
     );
   };
@@ -228,8 +251,13 @@ const HoaAttendacHistory = () => {
   // GET ADMISSION NUMBER
   // =========================================================
 
-  const getAdmissionNumber = (student) => {
-    if (!student || typeof student === "string") {
+  const getAdmissionNumber = (
+    student
+  ) => {
+    if (
+      !student ||
+      typeof student === "string"
+    ) {
       return "-";
     }
 
@@ -242,45 +270,53 @@ const HoaAttendacHistory = () => {
   };
 
   // =========================================================
-  // NORMALIZE STATUS
+  // GET STATUS
   // =========================================================
 
   const getStatus = (record) => {
-    return (
-      record?.status ||
-      "Unknown"
-    );
+    return record?.status || "Unknown";
   };
 
   // =========================================================
-  // FILTER STUDENTS
+  // FILTER STUDENTS INSIDE MODAL
   // =========================================================
 
   const filteredRecords =
-    selectedDay?.records?.filter((record) => {
-      const studentName = getStudentName(
-        record?.student
-      ).toLowerCase();
+    selectedDay?.records?.filter(
+      (record) => {
+        const studentName =
+          getStudentName(
+            record?.student
+          ).toLowerCase();
 
-      const admissionNumber =
-        getAdmissionNumber(
-          record?.student
-        )
-          .toString()
-          .toLowerCase();
+        const admissionNumber =
+          String(
+            getAdmissionNumber(
+              record?.student
+            )
+          ).toLowerCase();
 
-      const status =
-        getStatus(record).toLowerCase();
+        const status =
+          getStatus(
+            record
+          ).toLowerCase();
 
-      const search =
-        searchTerm.toLowerCase();
+        const search =
+          searchTerm
+            .trim()
+            .toLowerCase();
 
-      return (
-        studentName.includes(search) ||
-        admissionNumber.includes(search) ||
-        status.includes(search)
-      );
-    }) || [];
+        return (
+          studentName.includes(
+            search
+          ) ||
+          admissionNumber.includes(
+            search
+          ) ||
+          status.includes(search)
+        );
+      }
+    ) || [];
 
   // =========================================================
   // EXPORT EXCEL
@@ -296,45 +332,50 @@ const HoaAttendacHistory = () => {
     }
 
     try {
-      // Find selected class
-      const selectedClass = classes.find(
-        (item) => item._id === classId
-      );
+      const selectedClass =
+        classes.find(
+          (item) =>
+            item._id === classId
+        );
 
       const className =
-        selectedClass?.name || "Class";
+        selectedClass?.name ||
+        "Class";
 
-      // Prepare Excel rows
-      const excelData = day.records.map(
-        (record, index) => {
-          const student = record?.student;
+      const excelData =
+        day.records.map(
+          (record, index) => {
+            const student =
+              record?.student;
 
-          return {
-            "S/N": index + 1,
+            return {
+              "S/N": index + 1,
 
-            "Student Name":
-              getStudentName(student),
+              "Student Name":
+                getStudentName(
+                  student
+                ),
 
-            "Admission Number":
-              getAdmissionNumber(student),
+              "Admission Number":
+                getAdmissionNumber(
+                  student
+                ),
 
-            Status:
-              getStatus(record),
+              Status:
+                getStatus(record),
 
-            Date: day.date,
+              Date: day.date,
 
-            Class: className,
-          };
-        }
-      );
+              Class: className,
+            };
+          }
+        );
 
-      // Create worksheet
       const worksheet =
         XLSX.utils.json_to_sheet(
           excelData
         );
 
-      // Set column widths
       worksheet["!cols"] = [
         { wch: 8 },
         { wch: 30 },
@@ -344,7 +385,6 @@ const HoaAttendacHistory = () => {
         { wch: 20 },
       ];
 
-      // Create workbook
       const workbook =
         XLSX.utils.book_new();
 
@@ -354,15 +394,17 @@ const HoaAttendacHistory = () => {
         "Attendance"
       );
 
-      // Filename
       const safeClassName =
         className
-          .replace(/[^a-z0-9]/gi, "_")
+          .replace(
+            /[^a-z0-9]/gi,
+            "_"
+          )
           .toLowerCase();
 
-      const fileName = `Attendance_${safeClassName}_${day.date}.xlsx`;
+      const fileName =
+        `Attendance_${safeClassName}_${day.date}.xlsx`;
 
-      // Download
       XLSX.writeFile(
         workbook,
         fileName
@@ -387,8 +429,12 @@ const HoaAttendacHistory = () => {
   // STATUS UI
   // =========================================================
 
-  const getStatusStyle = (status) => {
-    switch (status?.toLowerCase()) {
+  const getStatusStyle = (
+    status
+  ) => {
+    switch (
+      status?.toLowerCase()
+    ) {
       case "present":
         return {
           wrapper:
@@ -441,8 +487,7 @@ const HoaAttendacHistory = () => {
   return (
     <div className="space-y-5">
 
-      {/* =====================================================
-          PAGE HEADER
+      {/* PAGE HEADER */}
 
       <div>
         <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
@@ -451,17 +496,17 @@ const HoaAttendacHistory = () => {
             className="text-teal-600"
           />
 
-          History Attendance
+          Attendance History
         </h1>
 
         <p className="mt-0.5 text-sm text-gray-500">
-          Track attendance, view student records,
-          or download attendance as Excel.
+          Track attendance, view student
+          records, or download attendance
+          as Excel.
         </p>
       </div>
 
-      {/* =====================================================
-          FILTER
+      {/* FILTER */}
 
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
@@ -497,6 +542,15 @@ const HoaAttendacHistory = () => {
                   {classItem.name}
                 </option>
               )
+            )}
+
+            {!classes.length && (
+              <option
+                value=""
+                disabled
+              >
+                No classes available
+              </option>
             )}
           </select>
 
@@ -544,8 +598,7 @@ const HoaAttendacHistory = () => {
         </div>
       </div>
 
-      {/* =====================================================
-          ATTENDANCE RECORDS
+      {/* ATTENDANCE RECORDS */}
 
       {classId && (
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -597,6 +650,7 @@ const HoaAttendacHistory = () => {
                   marked for this class
                   on this date.
                 </p>
+
               </div>
             )}
 
@@ -643,6 +697,7 @@ const HoaAttendacHistory = () => {
                             0 && (
                             <>
                               {" · "}
+
                               <span className="text-yellow-600">
                                 {day.leave} leave
                               </span>
@@ -682,14 +737,15 @@ const HoaAttendacHistory = () => {
         </div>
       )}
 
-      {/* =====================================================
-          ATTENDANCE MODAL
+      {/* ATTENDANCE MODAL */}
 
       {isModalOpen &&
         selectedDay && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-            onClick={closeAttendanceModal}
+            onClick={
+              closeAttendanceModal
+            }
           >
 
             <div
@@ -699,8 +755,7 @@ const HoaAttendacHistory = () => {
               }
             >
 
-              {/* =================================================
-                  MODAL HEADER
+              {/* MODAL HEADER */}
 
               <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
 
@@ -744,6 +799,7 @@ const HoaAttendacHistory = () => {
                       closeAttendanceModal
                     }
                     className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                    aria-label="Close attendance details"
                   >
                     <X size={19} />
                   </button>
@@ -752,8 +808,7 @@ const HoaAttendacHistory = () => {
 
               </div>
 
-              {/* =================================================
-                  SUMMARY
+              {/* SUMMARY */}
 
               <div className="grid grid-cols-2 gap-3 border-b border-gray-100 bg-gray-50 p-4 sm:grid-cols-4">
 
@@ -807,8 +862,7 @@ const HoaAttendacHistory = () => {
 
               </div>
 
-              {/* =================================================
-                  SEARCH
+              {/* SEARCH */}
 
               <div className="border-b border-gray-100 p-4">
 
@@ -835,8 +889,7 @@ const HoaAttendacHistory = () => {
 
               </div>
 
-              {/* =================================================
-                  TABLE
+              {/* TABLE */}
 
               <div className="flex-1 overflow-auto">
 
@@ -913,8 +966,7 @@ const HoaAttendacHistory = () => {
                             >
 
                               <td className="px-5 py-3 text-sm text-gray-400">
-                                {index +
-                                  1}
+                                {index + 1}
                               </td>
 
                               <td className="px-5 py-3">
@@ -959,8 +1011,7 @@ const HoaAttendacHistory = () => {
 
               </div>
 
-              {/* =================================================
-                  MODAL FOOTER
+              {/* MODAL FOOTER */}
 
               <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-5 py-3">
 
@@ -974,8 +1025,9 @@ const HoaAttendacHistory = () => {
                   of{" "}
                   <span className="font-semibold text-gray-700">
                     {
-                      selectedDay.records
-                        ?.length || 0
+                      selectedDay
+                        .records?.length ||
+                      0
                     }
                   </span>{" "}
                   students

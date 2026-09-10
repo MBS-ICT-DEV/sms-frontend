@@ -15,8 +15,7 @@ import {
 } from "lucide-react";
 import adminAPI from "../../api/admin.api";
 
-const normalizeText = (value) =>
-  String(value || "").trim();
+const normalizeText = (value) => String(value || "").trim();
 
 const getSectionKey = (section) => {
   const name = normalizeText(section?.name).toLowerCase();
@@ -49,10 +48,7 @@ const getDepartmentKey = (department) => {
     return "science";
   }
 
-  if (
-    code.includes("art") ||
-    name.includes("art")
-  ) {
+  if (code.includes("art") || name.includes("art")) {
     return "arts";
   }
 
@@ -78,11 +74,8 @@ function AcademicManagementPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const [editingSubject, setEditingSubject] =
-    useState(null);
-
-  const [editingDepartment, setEditingDepartment] =
-    useState(null);
+  const [editingSubject, setEditingSubject] = useState(null);
+  const [editingDepartment, setEditingDepartment] = useState(null);
 
   const [selectedSectionFilter, setSelectedSectionFilter] =
     useState("all");
@@ -105,34 +98,30 @@ function AcademicManagementPage() {
     description: "",
   });
 
-  const seniorSection = useMemo(
-    () =>
-      sections.find(
-        (section) =>
-          getSectionKey(section) === "ss"
-      ),
-    [sections]
-  );
+  /*
+   * ==========================================
+   * DERIVED DATA
+   * ==========================================
+   */
 
-  const sectionMap = useMemo(
-    () =>
-      Object.fromEntries(
-        sections.map((section) => [
-          section._id,
-          section,
-        ])
-      ),
-    [sections]
-  );
+  const seniorSection = useMemo(() => {
+    return sections.find(
+      (section) => getSectionKey(section) === "ss"
+    );
+  }, [sections]);
+
+  const sectionMap = useMemo(() => {
+    return Object.fromEntries(
+      sections.map((section) => [section._id, section])
+    );
+  }, [sections]);
 
   const groupedClasses = useMemo(() => {
     return sections.map((section) => ({
       ...section,
-
       items: classes.filter(
         (item) =>
-          (item.section?._id ||
-            item.section) === section._id
+          (item.section?._id || item.section) === section._id
       ),
     }));
   }, [classes, sections]);
@@ -158,15 +147,23 @@ function AcademicManagementPage() {
 
     return list;
   }, [
-    selectedDepartmentFilter,
-    selectedSectionFilter,
     subjects,
+    selectedSectionFilter,
+    selectedDepartmentFilter,
   ]);
 
+  const isSubjectSS = useMemo(() => {
+    if (!subjectForm.sectionId) return false;
+
+    const section = sectionMap[subjectForm.sectionId];
+
+    return section && getSectionKey(section) === "ss";
+  }, [subjectForm.sectionId, sectionMap]);
+
   /*
-   * ================================
+   * ==========================================
    * LOAD ALL ACADEMIC DATA
-   * ================================
+   * ==========================================
    */
 
   const loadData = async () => {
@@ -204,12 +201,11 @@ function AcademicManagementPage() {
       setSubjects(nextSubjects);
 
       /*
-       * Set Senior Secondary as the default
-       * department section.
+       * Default department section to
+       * Senior Secondary.
        */
       const ssSection = nextSections.find(
-        (section) =>
-          getSectionKey(section) === "ss"
+        (section) => getSectionKey(section) === "ss"
       );
 
       if (ssSection) {
@@ -236,9 +232,9 @@ function AcademicManagementPage() {
   }, []);
 
   /*
-   * ================================
+   * ==========================================
    * LOAD SENIOR SECONDARY DEPARTMENTS
-   * ================================
+   * ==========================================
    */
 
   useEffect(() => {
@@ -270,38 +266,45 @@ function AcademicManagementPage() {
   }, [seniorSection?._id]);
 
   /*
-   * ================================
-   * REFRESH
-   * ================================
+   * ==========================================
+   * REFRESH DATA
+   * ==========================================
    */
 
   const refreshAllData = async () => {
     await loadData();
 
-    if (seniorSection?._id) {
+    /*
+     * Reload SS departments immediately.
+     */
+    const currentSeniorSection =
+      sections.find(
+        (section) => getSectionKey(section) === "ss"
+      );
+
+    if (currentSeniorSection?._id) {
       try {
         const { data } =
           await adminAPI.getDepartmentsBySection(
-            seniorSection._id
+            currentSeniorSection._id
           );
 
         setSectionDepartments(
           data?.departments || []
         );
       } catch (err) {
-        const message =
-          err?.response?.data?.message ||
-          "Failed to refresh SS departments";
-
-        toast.error(message);
+        console.error(
+          "Failed to refresh departments:",
+          err
+        );
       }
     }
   };
 
   /*
-   * ================================
+   * ==========================================
    * SUBJECT FORM
-   * ================================
+   * ==========================================
    */
 
   const handleSubjectFormChange = (
@@ -316,7 +319,6 @@ function AcademicManagementPage() {
         return {
           ...current,
           sectionId: value,
-
           departmentId:
             selectedSection &&
             getSectionKey(selectedSection) === "ss"
@@ -332,6 +334,12 @@ function AcademicManagementPage() {
     });
   };
 
+  /*
+   * ==========================================
+   * SELECT SUBJECT SECTION
+   * ==========================================
+   */
+
   const handleSectionSelection = async (
     sectionId
   ) => {
@@ -341,11 +349,9 @@ function AcademicManagementPage() {
       departmentId: "",
     }));
 
-    const selectedSection =
-      sections.find(
-        (section) =>
-          section._id === sectionId
-      );
+    const selectedSection = sections.find(
+      (section) => section._id === sectionId
+    );
 
     if (
       selectedSection &&
@@ -372,36 +378,38 @@ function AcademicManagementPage() {
     }
   };
 
+  /*
+   * ==========================================
+   * RESET SUBJECT FORM
+   * ==========================================
+   */
+
   const resetSubjectForm = () => {
     setEditingSubject(null);
 
     setSubjectForm({
       name: "",
       code: "",
-      sectionId:
-        seniorSection?._id || "",
+      sectionId: seniorSection?._id || "",
       departmentId: "",
       description: "",
     });
   };
 
   /*
-   * ================================
+   * ==========================================
    * CREATE / UPDATE SUBJECT
-   * ================================
+   * ==========================================
    */
 
-  const handleSubjectSubmit = async (
-    event
-  ) => {
+  const handleSubjectSubmit = async (event) => {
     event.preventDefault();
     event.stopPropagation();
 
     const selectedSection =
       sections.find(
         (section) =>
-          section._id ===
-          subjectForm.sectionId
+          section._id === subjectForm.sectionId
       );
 
     if (!selectedSection) {
@@ -411,8 +419,9 @@ function AcademicManagementPage() {
 
     const payload = {
       name: normalizeText(subjectForm.name),
-      code: normalizeText(subjectForm.code)
-        .toUpperCase(),
+      code: normalizeText(
+        subjectForm.code
+      ).toUpperCase(),
       sectionId: subjectForm.sectionId,
       description: normalizeText(
         subjectForm.description
@@ -420,7 +429,7 @@ function AcademicManagementPage() {
     };
 
     /*
-     * Senior Secondary MUST have a department.
+     * Senior Secondary requires department.
      */
     if (
       getSectionKey(selectedSection) === "ss"
@@ -434,14 +443,10 @@ function AcademicManagementPage() {
 
       payload.departmentId =
         subjectForm.departmentId;
-    }
-
-    /*
-     * Primary / JSS must NOT have department.
-     */
-    if (
-      getSectionKey(selectedSection) !== "ss"
-    ) {
+    } else {
+      /*
+       * Primary and JSS do not use departments.
+       */
       payload.departmentId = null;
     }
 
@@ -466,9 +471,7 @@ function AcademicManagementPage() {
           "Subject updated successfully"
         );
       } else {
-        await adminAPI.createSubject(
-          payload
-        );
+        await adminAPI.createSubject(payload);
 
         toast.success(
           "Subject created successfully"
@@ -491,58 +494,70 @@ function AcademicManagementPage() {
   };
 
   /*
-   * ================================
+   * ==========================================
    * EDIT SUBJECT
-   * ================================
+   * ==========================================
    */
 
-  const handleEditSubject = (
+  const handleEditSubject = async (
     subject
   ) => {
     setEditingSubject(subject);
 
     const sectionId =
-      subject.section?._id || "";
+      subject.section?._id ||
+      subject.section ||
+      "";
+
+    const departmentId =
+      subject.department?._id ||
+      subject.department ||
+      "";
 
     setSubjectForm({
       name: subject.name || "",
       code: subject.code || "",
       sectionId,
-      departmentId:
-        subject.department?._id || "",
+      departmentId,
       description:
         subject.description || "",
     });
 
     const matchingSection =
       sections.find(
-        (section) =>
-          section._id === sectionId
+        (section) => section._id === sectionId
       );
 
     if (
       matchingSection &&
       getSectionKey(matchingSection) === "ss"
     ) {
-      adminAPI
-        .getDepartmentsBySection(sectionId)
-        .then(({ data }) =>
-          setSectionDepartments(
-            data?.departments || []
-          )
-        )
-        .catch(() =>
-          setSectionDepartments([])
+      try {
+        const { data } =
+          await adminAPI.getDepartmentsBySection(
+            sectionId
+          );
+
+        setSectionDepartments(
+          data?.departments || []
         );
+      } catch (err) {
+        console.error(
+          "Failed to load departments:",
+          err
+        );
+
+        setSectionDepartments([]);
+      }
     } else {
       setSectionDepartments([]);
     }
   };
 
   /*
-   * ================================
+   * ==========================================
    * DELETE SUBJECT
-   * ================================
+   * ==========================================
    */
 
   const handleDeleteSubject = async (
@@ -576,9 +591,9 @@ function AcademicManagementPage() {
   };
 
   /*
-   * ================================
+   * ==========================================
    * CREATE / UPDATE DEPARTMENT
-   * ================================
+   * ==========================================
    */
 
   const handleDepartmentSubmit = async (
@@ -588,7 +603,7 @@ function AcademicManagementPage() {
     event.stopPropagation();
 
     /*
-     * Departments ONLY belong to SS.
+     * Departments belong ONLY to SS.
      */
     if (!seniorSection?._id) {
       toast.error(
@@ -601,15 +616,12 @@ function AcademicManagementPage() {
       name: normalizeText(
         departmentForm.name
       ),
-
       code: normalizeText(
         departmentForm.code
       ).toUpperCase(),
-
       description: normalizeText(
         departmentForm.description
       ),
-
       sectionId: seniorSection._id,
     };
 
@@ -667,17 +679,15 @@ function AcademicManagementPage() {
   };
 
   /*
-   * ================================
+   * ==========================================
    * EDIT DEPARTMENT
-   * ================================
+   * ==========================================
    */
 
   const handleEditDepartment = (
     department
   ) => {
-    setEditingDepartment(
-      department
-    );
+    setEditingDepartment(department);
 
     setDepartmentForm({
       name: department.name || "",
@@ -690,9 +700,9 @@ function AcademicManagementPage() {
   };
 
   /*
-   * ================================
+   * ==========================================
    * DELETE DEPARTMENT
-   * ================================
+   * ==========================================
    */
 
   const handleDeleteDepartment = async (
@@ -726,9 +736,9 @@ function AcademicManagementPage() {
   };
 
   /*
-   * ================================
-   * ASSIGN OLD CLASSES
-   * ================================
+   * ==========================================
+   * ASSIGN EXISTING CLASSES
+   * ==========================================
    */
 
   const handleAssignExistingClasses =
@@ -739,52 +749,54 @@ function AcademicManagementPage() {
 
         console.log(
           "ALL CLASSES:",
-          response.data.classes
+          response?.data?.classes
         );
 
-        console.table(
-          response.data.classes.map(
-            (item) => ({
-              name: item.name,
+        if (response?.data?.classes) {
+          console.table(
+            response.data.classes.map(
+              (item) => ({
+                name: item.name,
 
-              section:
-                item.section?.name ||
-                "NOT ASSIGNED",
+                section:
+                  item.section?.name ||
+                  "NOT ASSIGNED",
 
-              sectionCode:
-                item.section?.code ||
-                "NOT ASSIGNED",
+                sectionCode:
+                  item.section?.code ||
+                  "NOT ASSIGNED",
 
-              department:
-                item.department?.name ||
-                "NONE",
-            })
-          )
-        );
+                department:
+                  item.department?.name ||
+                  "NONE",
+              })
+            )
+          );
+        }
 
         toast.success(
-          response.data.message
+          response?.data?.message ||
+            "Classes assigned successfully"
         );
 
-        /*
-         * Refresh the page data so the
-         * section/class display updates.
-         */
         await refreshAllData();
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(
+          "Assign existing classes error:",
+          err
+        );
 
         toast.error(
-          error?.response?.data?.message ||
+          err?.response?.data?.message ||
             "Failed to assign classes"
         );
       }
     };
 
   /*
-   * ================================
+   * ==========================================
    * LOADING
-   * ================================
+   * ==========================================
    */
 
   if (loading) {
@@ -802,10 +814,18 @@ function AcademicManagementPage() {
     );
   }
 
+  /*
+   * ==========================================
+   * UI
+   * ==========================================
+   */
+
   return (
     <div className="space-y-6">
 
-      {/* DEVELOPMENT / MIGRATION BUTTON */}
+      {/* =====================================
+          TOP ACTION
+      ===================================== */}
 
       <div className="flex justify-end">
         <button
@@ -813,7 +833,7 @@ function AcademicManagementPage() {
           onClick={
             handleAssignExistingClasses
           }
-          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
         >
           <Layers3 size={16} />
 
@@ -821,22 +841,24 @@ function AcademicManagementPage() {
         </button>
       </div>
 
-      {/* HEADER */}
+      {/* =====================================
+          HEADER
+      ===================================== */}
 
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Academic Management
-          </h1>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Academic Management
+        </h1>
 
-          <p className="text-sm text-gray-500 mt-1">
-            Sections, classes, departments and
-            subjects
-          </p>
-        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          Manage sections, classes, departments
+          and subjects
+        </p>
       </div>
 
-      {/* ERROR */}
+      {/* =====================================
+          ERROR
+      ===================================== */}
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -844,11 +866,15 @@ function AcademicManagementPage() {
         </div>
       )}
 
-      {/* STATISTICS */}
+      {/* =====================================
+          STATISTICS
+      ===================================== */}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        {/* Sections */}
+
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
               Sections
@@ -860,12 +886,14 @@ function AcademicManagementPage() {
             />
           </div>
 
-          <p className="text-3xl font-bold text-gray-900 mt-2">
+          <p className="mt-2 text-3xl font-bold text-gray-900">
             {sections.length}
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        {/* Classes */}
+
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
               Classes
@@ -877,12 +905,14 @@ function AcademicManagementPage() {
             />
           </div>
 
-          <p className="text-3xl font-bold text-gray-900 mt-2">
+          <p className="mt-2 text-3xl font-bold text-gray-900">
             {classes.length}
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        {/* Departments */}
+
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
               Departments
@@ -894,12 +924,14 @@ function AcademicManagementPage() {
             />
           </div>
 
-          <p className="text-3xl font-bold text-gray-900 mt-2">
+          <p className="mt-2 text-3xl font-bold text-gray-900">
             {departments.length}
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        {/* Subjects */}
+
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
               Subjects
@@ -911,19 +943,21 @@ function AcademicManagementPage() {
             />
           </div>
 
-          <p className="text-3xl font-bold text-gray-900 mt-2">
+          <p className="mt-2 text-3xl font-bold text-gray-900">
             {subjects.length}
           </p>
         </div>
       </div>
 
-      {/* SECTIONS + CLASSES */}
+      {/* =====================================
+          SECTIONS + CLASSES
+      ===================================== */}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
 
         {/* SECTIONS */}
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
 
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800">
@@ -937,52 +971,56 @@ function AcademicManagementPage() {
           </div>
 
           <div className="space-y-3">
-
-            {sections.map((section) => (
-              <div
-                key={section._id}
-                className="rounded-xl border border-gray-200 p-3"
-              >
-                <div className="flex items-center justify-between gap-3">
-
-                  <div>
-                    <p className="font-semibold text-gray-800">
-                      {section.name}
-                    </p>
-
-                    <p className="text-xs text-gray-500">
-                      Code:{" "}
-                      {section.code || "—"}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
-                      getSectionKey(
-                        section
-                      ) === "ss"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {getSectionKey(
-                      section
-                    )}
-                  </span>
-
-                </div>
+            {sections.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center">
+                <p className="text-sm text-gray-500">
+                  No sections found.
+                </p>
               </div>
-            ))}
+            ) : (
+              sections.map((section) => (
+                <div
+                  key={section._id}
+                  className="rounded-xl border border-gray-200 p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
 
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        {section.name}
+                      </p>
+
+                      <p className="text-xs text-gray-500">
+                        Code:{" "}
+                        {section.code || "—"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                        getSectionKey(
+                          section
+                        ) === "ss"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {getSectionKey(
+                        section
+                      )}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
         {/* CLASSES */}
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
 
           <div className="mb-4 flex items-center justify-between">
-
             <h2 className="text-lg font-semibold text-gray-800">
               Classes by section
             </h2>
@@ -991,38 +1029,31 @@ function AcademicManagementPage() {
               size={18}
               className="text-gray-500"
             />
-
           </div>
 
           <div className="space-y-4">
-
             {groupedClasses.map(
               (section) => (
                 <div
                   key={section._id}
                   className="rounded-xl border border-gray-200 p-3"
                 >
-
-                  <div className="flex items-center justify-between mb-2">
-
+                  <div className="mb-2 flex items-center justify-between">
                     <p className="font-semibold text-gray-800">
                       {section.name}
                     </p>
 
                     <span className="text-xs text-gray-500">
                       {
-                        section.items
-                          .length
+                        section.items.length
                       }{" "}
                       classes
                     </span>
-
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-
-                    {section.items
-                      .length === 0 ? (
+                    {section.items.length ===
+                    0 ? (
                       <span className="text-xs text-gray-400">
                         No classes in this
                         section yet.
@@ -1040,25 +1071,25 @@ function AcademicManagementPage() {
                         )
                       )
                     )}
-
                   </div>
-
                 </div>
               )
             )}
-
           </div>
         </div>
       </div>
 
-      {/* DEPARTMENTS + SUBJECTS */}
+      {/* =====================================
+          DEPARTMENTS + SUBJECTS
+      ===================================== */}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
 
-        {/* =========================
+        {/* ===================================
             DEPARTMENTS
+        =================================== */}
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
 
           <div className="mb-4 flex items-center justify-between">
 
@@ -1067,7 +1098,7 @@ function AcademicManagementPage() {
                 Departments
               </h2>
 
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="mt-1 text-xs text-gray-500">
                 Senior Secondary departments
               </p>
             </div>
@@ -1076,7 +1107,6 @@ function AcademicManagementPage() {
               size={18}
               className="text-gray-500"
             />
-
           </div>
 
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
@@ -1090,14 +1120,14 @@ function AcademicManagementPage() {
             onSubmit={
               handleDepartmentSubmit
             }
-            className="space-y-3 mb-5"
+            className="mb-5 space-y-3"
           >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* NAME */}
 
               <div>
-
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-600">
                   Department name
                 </label>
 
@@ -1114,15 +1144,15 @@ function AcademicManagementPage() {
                       })
                     )
                   }
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
                   placeholder="Science"
                 />
-
               </div>
 
-              <div>
+              {/* CODE */}
 
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
                   Code
                 </label>
 
@@ -1139,19 +1169,16 @@ function AcademicManagementPage() {
                       })
                     )
                   }
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm uppercase outline-none focus:ring-2 focus:ring-blue-200"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm uppercase outline-none transition focus:ring-2 focus:ring-blue-200"
                   placeholder="SCI"
                 />
-
               </div>
-
             </div>
 
-            {/* SECTION IS AUTOMATICALLY SS */}
+            {/* SECTION */}
 
             <div>
-
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="mb-1 block text-xs font-medium text-gray-600">
                 Section
               </label>
 
@@ -1164,12 +1191,12 @@ function AcademicManagementPage() {
                 disabled
                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
               />
-
             </div>
 
-            <div>
+            {/* DESCRIPTION */}
 
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
                 Description
               </label>
 
@@ -1186,24 +1213,23 @@ function AcademicManagementPage() {
                     })
                   )
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                rows="3"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
+                rows={3}
                 placeholder="Optional description"
               />
-
             </div>
 
-            <div className="flex gap-2">
+            {/* BUTTONS */}
 
+            <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={
                   saving ||
                   !seniorSection
                 }
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-
                 {saving ? (
                   <Loader2
                     size={15}
@@ -1216,7 +1242,6 @@ function AcademicManagementPage() {
                 {editingDepartment
                   ? "Update department"
                   : "Create department"}
-
               </button>
 
               {editingDepartment && (
@@ -1236,75 +1261,66 @@ function AcademicManagementPage() {
                       description: "",
                     });
                   }}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700"
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
                 >
                   <X size={15} />
 
                   Cancel
                 </button>
               )}
-
             </div>
-
           </form>
 
           {/* DEPARTMENT LIST */}
 
           <div className="space-y-3">
-
             {departments.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center">
-
                 <Building2
                   size={28}
-                  className="mx-auto text-gray-300 mb-2"
+                  className="mx-auto mb-2 text-gray-300"
                 />
 
                 <p className="text-sm text-gray-500">
                   No departments found.
                 </p>
 
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="mt-1 text-xs text-gray-400">
                   Create Science, Arts and
                   Commercial.
                 </p>
-
               </div>
             ) : (
               departments.map(
                 (department) => (
                   <div
                     key={department._id}
-                    className="flex items-center justify-between rounded-xl border border-gray-200 p-3 gap-3"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3"
                   >
+                    <div className="flex min-w-0 items-center gap-3">
 
-                    <div className="flex items-center gap-3">
-
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                         <Building2
                           size={18}
                         />
                       </div>
 
-                      <div>
-
+                      <div className="min-w-0">
                         <p className="font-semibold text-gray-800">
                           {department.name}
                         </p>
 
-                        <p className="text-xs text-gray-500">
-                          {department.code}{" "}
-                          ·{" "}
+                        <p className="truncate text-xs text-gray-500">
+                          {department.code}
+                          {" · "}
                           {department.section
                             ?.name ||
                             "Senior Secondary"}
                         </p>
-
                       </div>
-
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
 
                       <button
                         type="button"
@@ -1313,7 +1329,7 @@ function AcademicManagementPage() {
                             department
                           )
                         }
-                        className="rounded-lg border border-gray-200 p-2 text-gray-700 hover:bg-gray-50"
+                        className="rounded-lg border border-gray-200 p-2 text-gray-700 transition hover:bg-gray-50"
                         aria-label="Edit department"
                       >
                         <Pencil
@@ -1328,28 +1344,26 @@ function AcademicManagementPage() {
                             department._id
                           )
                         }
-                        className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50"
+                        className="rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50"
                         aria-label="Deactivate department"
                       >
                         <Trash2
                           size={15}
                         />
                       </button>
-
                     </div>
-
                   </div>
                 )
               )
             )}
-
           </div>
         </div>
 
-        {/* =========================
+        {/* ===================================
             SUBJECTS
+        =================================== */}
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
 
           <div className="mb-4 flex items-center justify-between">
 
@@ -1358,7 +1372,7 @@ function AcademicManagementPage() {
                 Subjects
               </h2>
 
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="mt-1 text-xs text-gray-500">
                 Manage subjects by section and
                 department
               </p>
@@ -1368,21 +1382,20 @@ function AcademicManagementPage() {
               size={18}
               className="text-gray-500"
             />
-
           </div>
 
           {/* SUBJECT FORM */}
 
           <form
             onSubmit={handleSubjectSubmit}
-            className="space-y-3 mb-5"
+            className="mb-5 space-y-3"
           >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* NAME */}
 
               <div>
-
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="mb-1 block text-xs font-medium text-gray-600">
                   Name
                 </label>
 
@@ -1399,15 +1412,15 @@ function AcademicManagementPage() {
                       })
                     )
                   }
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
                   placeholder="Mathematics"
                 />
-
               </div>
 
-              <div>
+              {/* CODE */}
 
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
                   Code
                 </label>
 
@@ -1424,19 +1437,16 @@ function AcademicManagementPage() {
                       })
                     )
                   }
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm uppercase outline-none focus:ring-2 focus:ring-blue-200"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm uppercase outline-none transition focus:ring-2 focus:ring-blue-200"
                   placeholder="MATH"
                 />
-
               </div>
-
             </div>
 
             {/* SECTION */}
 
             <div>
-
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="mb-1 block text-xs font-medium text-gray-600">
                 Section
               </label>
 
@@ -1449,9 +1459,8 @@ function AcademicManagementPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
               >
-
                 <option value="">
                   Select section
                 </option>
@@ -1466,82 +1475,62 @@ function AcademicManagementPage() {
                     </option>
                   )
                 )}
-
               </select>
-
             </div>
 
             {/* DEPARTMENT */}
 
-            {subjectForm.sectionId &&
-              sections.find(
-                (section) =>
-                  section._id ===
-                  subjectForm.sectionId
-              ) &&
-              getSectionKey(
-                sections.find(
-                  (section) =>
-                    section._id ===
-                    subjectForm.sectionId
-                )
-              ) === "ss" && (
+            {isSubjectSS && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Department
+                </label>
 
-                <div>
+                <select
+                  value={
+                    subjectForm.departmentId
+                  }
+                  onChange={(event) =>
+                    handleSubjectFormChange(
+                      "departmentId",
+                      event.target.value
+                    )
+                  }
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="">
+                    Select department
+                  </option>
 
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Department
-                  </label>
-
-                  <select
-                    value={
-                      subjectForm.departmentId
-                    }
-                    onChange={(event) =>
-                      handleSubjectFormChange(
-                        "departmentId",
-                        event.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                  >
-
-                    <option value="">
-                      Select department
-                    </option>
-
-                    {sectionDepartments.map(
-                      (department) => (
-                        <option
-                          key={
-                            department._id
-                          }
-                          value={
-                            department._id
-                          }
-                        >
-                          {department.name}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                  {sectionDepartments.length ===
-                    0 && (
-                    <p className="mt-1 text-xs text-amber-600">
-                      Create a department first.
-                    </p>
+                  {sectionDepartments.map(
+                    (department) => (
+                      <option
+                        key={
+                          department._id
+                        }
+                        value={
+                          department._id
+                        }
+                      >
+                        {department.name}
+                      </option>
+                    )
                   )}
+                </select>
 
-                </div>
-              )}
+                {sectionDepartments.length ===
+                  0 && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Create a department first.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* DESCRIPTION */}
 
             <div>
-
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="mb-1 block text-xs font-medium text-gray-600">
                 Description
               </label>
 
@@ -1558,21 +1547,20 @@ function AcademicManagementPage() {
                     })
                   )
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                rows="3"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
+                rows={3}
                 placeholder="Optional description"
               />
-
             </div>
 
-            <div className="flex gap-2">
+            {/* BUTTONS */}
 
+            <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-
                 {saving ? (
                   <Loader2
                     size={15}
@@ -1585,7 +1573,6 @@ function AcademicManagementPage() {
                 {editingSubject
                   ? "Update subject"
                   : "Create subject"}
-
               </button>
 
               {editingSubject && (
@@ -1594,25 +1581,24 @@ function AcademicManagementPage() {
                   onClick={
                     resetSubjectForm
                   }
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700"
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
                 >
                   <X size={15} />
 
                   Cancel
                 </button>
               )}
-
             </div>
-
           </form>
 
           {/* FILTERS */}
 
-          <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+
+            {/* SECTION FILTER */}
 
             <div>
-
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="mb-1 block text-xs font-medium text-gray-600">
                 Filter by section
               </label>
 
@@ -1625,9 +1611,8 @@ function AcademicManagementPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
               >
-
                 <option value="all">
                   All subjects
                 </option>
@@ -1644,14 +1629,13 @@ function AcademicManagementPage() {
                     </option>
                   )
                 )}
-
               </select>
-
             </div>
 
-            <div>
+            {/* DEPARTMENT FILTER */}
 
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
                 Department filter
               </label>
 
@@ -1664,9 +1648,8 @@ function AcademicManagementPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
               >
-
                 <option value="all">
                   All departments
                 </option>
@@ -1690,30 +1673,24 @@ function AcademicManagementPage() {
                     </option>
                   )
                 )}
-
               </select>
-
             </div>
-
           </div>
 
           {/* SUBJECT LIST */}
 
           <div className="space-y-3">
-
             {filteredSubjects.length ===
             0 ? (
               <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center">
-
                 <BookOpen
                   size={28}
-                  className="mx-auto text-gray-300 mb-2"
+                  className="mx-auto mb-2 text-gray-300"
                 />
 
                 <p className="text-sm text-gray-500">
                   No subjects found.
                 </p>
-
               </div>
             ) : (
               filteredSubjects.map(
@@ -1722,18 +1699,14 @@ function AcademicManagementPage() {
                     key={subject._id}
                     className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3"
                   >
-
                     <div className="min-w-0">
-
                       <p className="font-semibold text-gray-800">
                         {subject.name}
                       </p>
 
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="truncate text-xs text-gray-500">
                         {subject.code}
-
                         {" · "}
-
                         {subject.section
                           ?.name ||
                           "Section"}
@@ -1742,10 +1715,9 @@ function AcademicManagementPage() {
                           ? ` · ${subject.department.name}`
                           : ""}
                       </p>
-
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
 
                       <button
                         type="button"
@@ -1754,7 +1726,7 @@ function AcademicManagementPage() {
                             subject
                           )
                         }
-                        className="rounded-lg border border-gray-200 p-2 text-gray-700 hover:bg-gray-50"
+                        className="rounded-lg border border-gray-200 p-2 text-gray-700 transition hover:bg-gray-50"
                         aria-label="Edit subject"
                       >
                         <Pencil
@@ -1769,7 +1741,7 @@ function AcademicManagementPage() {
                             subject._id
                           )
                         }
-                        className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50"
+                        className="rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50"
                         aria-label="Deactivate subject"
                       >
                         <Trash2
@@ -1778,14 +1750,11 @@ function AcademicManagementPage() {
                       </button>
 
                     </div>
-
                   </div>
                 )
               )
             )}
-
           </div>
-
         </div>
       </div>
     </div>

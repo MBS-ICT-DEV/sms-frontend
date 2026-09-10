@@ -1,30 +1,79 @@
-import apiClient from './axios';
+import apiClient from "./axios.js";
 
 export const adminAPI = {
-  createAdmin: (data) => apiClient.post('/admin/create-admin', data),
-  getAllAdmins: () => apiClient.get('/admin/all-admins'),
-  getAllUsers: () => apiClient.get('/admin/all-users'),
+  // ============================================================
+  // ADMIN
+  // ============================================================
 
-  createPrincipal: (data) => apiClient.post('/admin/create-principal', data),
+  createAdmin: (data) =>
+    apiClient.post("/admin/create-admin", data),
 
-  createTeacher: (data) => apiClient.post('/admin/create-teacher', data),
-  getAllTeachers: () => apiClient.get('/admin/teachers'),
+  getAllAdmins: () =>
+    apiClient.get("/admin/all-admins"),
 
-  getClasses: () => apiClient.get('/admin/classes'),
+  getAllUsers: () =>
+    apiClient.get("/admin/all-users"),
 
-  // ✅ FIXED: className standard
-  createClass: (data) => {
-    const payload = {
-      name: data.className || data.name,
-      capacity: data.capacity,
-      section: data.section,
-  getSections: () => apiClient.get('/admin/sections'),
-  createSection: (data) => apiClient.post('/admin/create-section', data),
-  getSectionById: (sectionId) => apiClient.get(`/admin/sections/${sectionId}`),
-  getSectionClasses: (sectionId) => apiClient.get(`/admin/sections/${sectionId}/classes`),
-  getClasses: () => apiClient.get('/admin/classes'),
-  getClassById: (classId) => apiClient.get(`/admin/classes/${classId}`),
-  getClassesBySection: (sectionId) => apiClient.get(`/admin/classes/section/${sectionId}`),
+  // ============================================================
+  // PRINCIPAL
+  // ============================================================
+
+  createPrincipal: (data) =>
+    apiClient.post("/admin/create-principal", data),
+
+  // ============================================================
+  // TEACHERS
+  // ============================================================
+
+  createTeacher: (data) =>
+    apiClient.post("/admin/create-teacher", data),
+
+  getAllTeachers: () =>
+    apiClient.get("/admin/teachers"),
+
+  getTeachersResultStatus: (params) =>
+    apiClient.get("/admin/teachers/results-status", {
+      params,
+    }),
+
+  suspendTeacher: (id) =>
+    apiClient.put(`/admin/teachers/${id}/suspend`),
+
+  deleteTeacher: (id) =>
+    apiClient.delete(`/admin/teachers/${id}`),
+
+  // ============================================================
+  // STUDENTS
+  // ============================================================
+
+  getAllStudents: () =>
+    apiClient.get("/admin/students"),
+
+  getStudents: (params) =>
+    apiClient.get("/admin/students", {
+      params,
+    }),
+
+  deleteStudent: (id) =>
+    apiClient.delete(`/admin/students/${id}`),
+
+  getAllStudentByClass: (params) =>
+    apiClient.get("/admin/by-class", {
+      params,
+    }),
+
+  // ============================================================
+  // CLASSES
+  // ============================================================
+
+  getClasses: () =>
+    apiClient.get("/admin/classes"),
+
+  getClassById: (classId) =>
+    apiClient.get(`/admin/classes/${classId}`),
+
+  getClassesBySection: (sectionId) =>
+    apiClient.get(`/admin/classes/section/${sectionId}`),
 
   createClass: (data) => {
     const payload = {
@@ -36,22 +85,13 @@ export const adminAPI = {
       teacher: data.teacher || null,
     };
 
-    return apiClient.post('/admin/create-class', payload);
+    return apiClient.post("/admin/create-class", payload);
   },
 
-  getAllStudentByClass: (params) => {
-    return apiClient.get("/admin/by-class ", {params});
-  },
-  // 1 fetch for class and student
-  getClassStudentsForAttendance: (params) =>
-  apiClient.get("/admin/attendance/class/students", {
-    params,
-  }),
   updateClass: (id, data) => {
     const payload = {
       name: data.className || data.name,
       capacity: data.capacity,
-      section: data.section,
       sectionId: data.sectionId || data.section,
       section: data.sectionId || data.section,
       subjects: data.subjects || [],
@@ -60,70 +100,60 @@ export const adminAPI = {
     return apiClient.put(`/admin/classes/${id}`, payload);
   },
 
-  deleteClass: (id) => apiClient.delete(`/admin/classes/${id}`),
+  deleteClass: (id) =>
+    apiClient.delete(`/admin/classes/${id}`),
 
-  // ✅ FIXED: MUST be PUT (your backend uses router.put)
-  assignTeacherToClass: (data) => {
-    return apiClient.put('/admin/assign-teacher', {
+  assignTeacherToClass: (data) =>
+    apiClient.put("/admin/assign-teacher", {
       classId: data.classId,
       teacherId: data.teacherId,
-    });
-  },
-  
-  getAllStudents: () => apiClient.get('/admin/students'),
-  getTeacherClasses: () => apiClient.get('/admin/teacher-classes'),
+    }),
 
-  // HOA
-  createHOA: (data) => apiClient.post('/admin/create-hoa', data),
+  getTeacherClasses: () =>
+    apiClient.get("/admin/teacher-classes"),
 
-  // Secretary
-  createSecretary: (data) => apiClient.post('/admin/create-secretary', data),
-  getHoaStats: () => apiClient.get('/admin/hoa/stats'),
-getStudents: (params) => apiClient.get("/admin/students", { params }),
-  // HOA
-  createHOA: (data) => apiClient.post('/admin/create-hoa', data),
-markClassAttendance: (data) =>
-  apiClient.post("/admin/attendance/class", data),
- 
-fetchClassId:(params) => apiClient.post('', {params}),
+  // ============================================================
+  // SECTION
+  // ============================================================
 
-retreiveClassAttendance: (params) => 
-  apiClient.get("/admin/attendance/class", {params}),
+  getSections: () =>
+    apiClient.get("/admin/sections"),
 
-getAttendanceHistoryByClass: (params) =>
-  apiClient.get("/admin/attendance/class/history", {
-    params,
-  }),
+  createSection: (data) =>
+    apiClient.post("/admin/create-section", data),
 
-assignExistingClassesToSections: () =>
-  apiClient.post("/admin/classes/assign-existing-sections"),
+  getSectionById: (sectionId) =>
+    apiClient.get(`/admin/sections/${sectionId}`),
 
-assignClassesToSection: (data) =>
-  apiClient.post("/admin/classes/assign-section", data),
+  getSectionClasses: (sectionId) =>
+    apiClient.get(`/admin/sections/${sectionId}/classes`),
 
-getClassesBySection: (sectionId) =>
-  apiClient.get(`/admin/classes/section/${sectionId}`),
- // ===============================
-  // CLASSES
-  // ===============================
+  updateSection: (sectionId, data) =>
+    apiClient.patch(`/admin/sections/${sectionId}`, data),
 
-  getClasses: () =>
-    apiClient.get("/admin/classes"),
+  deleteSection: (sectionId) =>
+    apiClient.delete(`/admin/sections/${sectionId}`),
 
+  sectionClasses: (params) =>
+    apiClient.get("/admin/section/classes", {
+      params,
+    }),
+
+  assignExistingClassesToSections: () =>
+    apiClient.post("/admin/classes/assign-existing-sections"),
+
+  assignClassesToSection: (data) =>
+    apiClient.post("/admin/classes/assign-section", data),
+
+  // ============================================================
   // DEPARTMENTS
+  // ============================================================
 
-// BULK DEPARTMENTS
-
-createDepartmentBulk: (data) =>
-  apiClient.post("/admin/departments/bulk", data),
-
-//  BULK SUBJECTS
-// ===============================
-
-createSubjectBulk: (data) =>
-  apiClient.post("/admin/subjects/bulk", data),
   createDepartment: (data) =>
     apiClient.post("/admin/departments", data),
+
+  createDepartmentBulk: (data) =>
+    apiClient.post("/admin/departments/bulk", data),
 
   getAllDepartments: () =>
     apiClient.get("/admin/departments"),
@@ -145,12 +175,15 @@ createSubjectBulk: (data) =>
       `/admin/departments/${departmentId}`
     ),
 
-  // ===============================
+  // ============================================================
   // SUBJECTS
-  // ===============================
+  // ============================================================
 
   createSubject: (data) =>
     apiClient.post("/admin/subjects", data),
+
+  createSubjectBulk: (data) =>
+    apiClient.post("/admin/subjects/bulk", data),
 
   getAllSubjects: () =>
     apiClient.get("/admin/subjects"),
@@ -180,26 +213,100 @@ createSubjectBulk: (data) =>
     apiClient.delete(
       `/admin/subjects/${subjectId}`
     ),
-  // SECTION CLASSES
-  sectionClasses: (params) => apiClient.get("/admin/section/classes", {
-    params
-  }),
-// history continue here
-  historyOfAttendace: (params) => apiClient.get("/admin/attendance-history", {params}),
-  // Secretary
-  createSecretary: (data) => apiClient.post('/admin/create-secretary', data),
-  getHoaStats: () => apiClient.get('/admin/hoa/stats'),
-  getStaffStats: (params) => apiClient.get('/admin/staff-stats', {params}),
-  getAttendanceView: (params) => apiClient.get('/admin/attendance', { params }),
-  getTeachersResultStatus: (params) => apiClient.get('/admin/teachers/results-status', { params }),
-  suspendTeacher: (id) => apiClient.put(`/admin/teachers/${id}/suspend`),
-  deleteTeacher: (id) => apiClient.delete(`/admin/teachers/${id}`),
-  deleteStudent: (id) => apiClient.delete(`/admin/students/${id}`),
 
-  // Developer only
-  getKeyUsers:  () => apiClient.get('/admin/key-users'),
-  getAllStaff:  () => apiClient.get('/admin/all-staff'),
-  resetSystem:  () => apiClient.delete('/admin/reset-system'),
+  // ============================================================
+  // HOA
+  // ============================================================
+
+  createHOA: (data) =>
+    apiClient.post("/admin/create-hoa", data),
+
+  getHoaStats: () =>
+    apiClient.get("/admin/hoa/stats"),
+
+  getStaffStats: (params) =>
+    apiClient.get("/admin/staff-stats", {
+      params,
+    }),
+
+  // ============================================================
+  // SECRETARY
+  // ============================================================
+
+  createSecretary: (data) =>
+    apiClient.post("/admin/create-secretary", data),
+
+  // ============================================================
+  // ATTENDANCE
+  // ============================================================
+
+  getClassStudentsForAttendance: (params) =>
+    apiClient.get(
+      "/admin/attendance/class/students",
+      {
+        params,
+      }
+    ),
+
+  markClassAttendance: (data) =>
+    apiClient.post(
+      "/admin/attendance/class",
+      data
+    ),
+
+  retrieveClassAttendance: (params) =>
+    apiClient.get(
+      "/admin/attendance/class",
+      {
+        params,
+      }
+    ),
+
+  getAttendanceHistoryByClass: (params) =>
+    apiClient.get(
+      "/admin/attendance/class/history",
+      {
+        params,
+      }
+    ),
+
+  getAttendanceView: (params) =>
+    apiClient.get(
+      "/admin/attendance",
+      {
+        params,
+      }
+    ),
+
+  historyOfAttendance: (params) =>
+    apiClient.get(
+      "/admin/attendance-history",
+      {
+        params,
+      }
+    ),
+
+  // ============================================================
+  // FEES
+  // ============================================================
+
+  getFeeManagement: (params) =>
+    apiClient.get("/admin/fees", {
+      params,
+    }),
+
+  // ============================================================
+  // DEVELOPER / SYSTEM
+  // ============================================================
+
+  getKeyUsers: () =>
+    apiClient.get("/admin/key-users"),
+
+  getAllStaff: () =>
+    apiClient.get("/admin/all-staff"),
+
+  resetSystem: () =>
+    apiClient.delete("/admin/reset-system"),
 };
 
 export default adminAPI;

@@ -1,28 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
-import * as XLSX from 'xlsx';
-import MainLayout from '../../layouts/MainLayout';
-import { teacherAPI } from '../../api/teacher.api';
-import { toast } from 'react-toastify';
 import {
-  Upload, CheckCircle2, FileSpreadsheet, X, Download,
-  Link, Eye, RefreshCw, Table2,
-} from 'lucide-react';
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  Fragment,
+} from 'react';
 
-const DEFAULT_SUBJECTS = [
-  'Mathematics', 'English Language', 'Basic Science',
-  'Social Studies', 'Civic Education', 'Agricultural Science',
-  'Computer Studies', 'Physical & Health Education',
-];
-
-const MODES = [
-  { id: 'file',   label: 'Excel File',     Icon: FileSpreadsheet },
-  { id: 'sheets', label: 'Google Sheets',  Icon: Link },
-import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
 import * as XLSX from 'xlsx';
 
 import MainLayout from '../../layouts/MainLayout';
 import { teacherAPI } from '../../api/teacher.api';
-import adminAPI from '../../api/admin.api';
+import { adminAPI } from '../../api/admin.api';
 
 import { toast } from 'react-toastify';
 
@@ -38,6 +26,10 @@ import {
   Table2,
   Save,
 } from 'lucide-react';
+
+/* =========================================================
+   MODES
+========================================================= */
 
 const MODES = [
   {
@@ -57,65 +49,17 @@ const MODES = [
   },
 ];
 
+/* =========================================================
+   COMPONENT
+========================================================= */
+
 export default function ResultsUpload() {
+  /* =======================================================
+     SHARED STATE
+  ======================================================= */
+
   const [mode, setMode] = useState('file');
 
-  // shared
-  const [classes, setClasses]             = useState([]);
-  const [selectedClass, setSelectedClass] = useState('');
-  const [term, setTerm]                   = useState('');
-  const [session, setSession]             = useState('');
-  const [loading, setLoading]             = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [templateLoading, setTemplateLoading] = useState(false);
-
-  // file mode
-  const [file, setFile]         = useState(null);
-  const fileInputRef            = useRef(null);
-
-  // sheets mode
-  const [sheetsUrl, setSheetsUrl]       = useState('');
-  const [fetchingSheet, setFetchingSheet] = useState(false);
-  const [sheetPreview, setSheetPreview] = useState(null); // { rows, base64, headers }
-  const [sheetFile, setSheetFile]       = useState(null); // converted File object
-
-  useEffect(() => {
-    teacherAPI.getAssignedClasses()
-      .then(res => setClasses(res?.data?.classes || []))
-      .catch(() => toast.error('Failed to load classes'));
-  }, []);
-
-  // ── Download Template ──────────────────────────────────────────────────────
-  const handleDownloadTemplate = async () => {
-    if (!selectedClass) { toast.error('Select a class first'); return; }
-    if (!term)          { toast.error('Select a term first'); return; }
-    setTemplateLoading(true);
-    try {
-      const classObj  = classes.find(c => c._id === selectedClass);
-      const className = classObj?.name || 'Class';
-      const res       = await teacherAPI.getClassStudents(selectedClass);
-      const students  = res?.data?.students || [];
-      if (!students.length) { toast.error('No students found in this class'); return; }
-
-      const subjectCols = classObj?.subjects?.length ? classObj.subjects : DEFAULT_SUBJECTS;
-      const headers     = ['Reg No', 'Term', 'Class', ...subjectCols];
-      const dataRows    = students.map(s => {
-        const row = { 'Reg No': s.registrationNumber || '', 'Term': term, 'Class': className };
-        subjectCols.forEach(sub => { row[sub] = ''; });
-        return row;
-      });
-
-      const ws = XLSX.utils.json_to_sheet(dataRows, { header: headers });
-      ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 14) }));
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Results');
-      XLSX.writeFile(wb, `Result_Template_${className.replace(/\s/g, '_')}_${term.replace(/\s/g, '_')}.xlsx`);
-      toast.success(`Template downloaded — fill scores for ${students.length} student(s) then upload`);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to generate template');
-  // ─────────────────────────────────────────────
-  // SHARED
-  // ─────────────────────────────────────────────
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [term, setTerm] = useState('');
@@ -125,68 +69,84 @@ export default function ResultsUpload() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [templateLoading, setTemplateLoading] = useState(false);
 
-  // ─────────────────────────────────────────────
-  // SUBJECTS
-  // Subjects come from the selected class section
-  // ─────────────────────────────────────────────
-  const [subjects, setSubjects] = useState([]);
-  const [subjectsLoading, setSubjectsLoading] = useState(false);
+  /* =======================================================
+     FILE MODE
+  ======================================================= */
 
-  // ─────────────────────────────────────────────
-  // STUDENTS
-  // ─────────────────────────────────────────────
-  const [students, setStudents] = useState([]);
-  const [studentsLoading, setStudentsLoading] = useState(false);
-
-  // ─────────────────────────────────────────────
-  // MANUAL EXCEL INPUT
-  // ─────────────────────────────────────────────
-  const [manualResults, setManualResults] = useState({});
-
-  // ─────────────────────────────────────────────
-  // FILE MODE
-  // ─────────────────────────────────────────────
   const [file, setFile] = useState(null);
+
   const fileInputRef = useRef(null);
 
-  // ─────────────────────────────────────────────
-  // GOOGLE SHEETS MODE
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     GOOGLE SHEETS MODE
+  ======================================================= */
+
   const [sheetsUrl, setSheetsUrl] = useState('');
   const [fetchingSheet, setFetchingSheet] = useState(false);
+
   const [sheetPreview, setSheetPreview] = useState(null);
   const [sheetFile, setSheetFile] = useState(null);
 
-  // ─────────────────────────────────────────────
-  // LOAD CLASSES
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     MANUAL MODE
+  ======================================================= */
+
+  const [subjects, setSubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+
+  const [students, setStudents] = useState([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+
+  const [manualResults, setManualResults] = useState({});
+
+  /* =======================================================
+     LOAD ASSIGNED CLASSES
+  ======================================================= */
+
   useEffect(() => {
     const loadClasses = async () => {
       try {
-        const res = await teacherAPI.getAssignedClasses();
+        const response =
+          await teacherAPI.getAssignedClasses();
 
-        setClasses(res?.data?.classes || []);
+        setClasses(
+          response?.data?.classes || []
+        );
       } catch (error) {
-        console.error('Failed to load classes:', error);
-        toast.error('Failed to load classes');
+        console.error(
+          'Failed to load classes:',
+          error
+        );
+
+        toast.error(
+          error?.response?.data?.message ||
+            'Failed to load classes'
+        );
       }
     };
 
     loadClasses();
   }, []);
 
-  // ─────────────────────────────────────────────
-  // GET SELECTED CLASS
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     SELECTED CLASS OBJECT
+  ======================================================= */
+
   const selectedClassObject = useMemo(() => {
-    return classes.find((c) => c._id === selectedClass);
+    return classes.find(
+      (classItem) =>
+        classItem._id === selectedClass
+    );
   }, [classes, selectedClass]);
 
-  // ─────────────────────────────────────────────
-  // GET SECTION ID FROM SELECTED CLASS
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     SELECTED SECTION ID
+  ======================================================= */
+
   const selectedSectionId = useMemo(() => {
-    if (!selectedClassObject) return '';
+    if (!selectedClassObject) {
+      return '';
+    }
 
     return (
       selectedClassObject.section?._id ||
@@ -196,9 +156,10 @@ export default function ResultsUpload() {
     );
   }, [selectedClassObject]);
 
-  // ─────────────────────────────────────────────
-  // LOAD SUBJECTS FROM SECTION
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     LOAD SUBJECTS FOR SELECTED SECTION
+  ======================================================= */
+
   useEffect(() => {
     const loadSubjects = async () => {
       if (!selectedSectionId) {
@@ -216,7 +177,7 @@ export default function ResultsUpload() {
 
         console.log(
           'SUBJECTS BY SECTION:',
-          response.data
+          response?.data
         );
 
         const subjectList =
@@ -225,43 +186,52 @@ export default function ResultsUpload() {
           response?.data ||
           [];
 
-        // Normalize subjects
-        const normalizedSubjects = Array.isArray(
-          subjectList
-        )
-          ? subjectList
-              .map((subject) => {
-                if (!subject) return null;
+        const normalizedSubjects =
+          Array.isArray(subjectList)
+            ? subjectList
+                .map((subject) => {
+                  if (!subject) {
+                    return null;
+                  }
 
-                if (typeof subject === 'string') {
+                  if (
+                    typeof subject === 'string'
+                  ) {
+                    return {
+                      _id: subject,
+                      name: subject,
+                      subjectName: subject,
+                    };
+                  }
+
                   return {
-                    _id: subject,
-                    name: subject,
-                    subjectName: subject,
+                    _id:
+                      subject._id ||
+                      subject.id ||
+                      '',
+
+                    name:
+                      subject.name ||
+                      subject.subjectName ||
+                      subject.title ||
+                      'Subject',
+
+                    subjectName:
+                      subject.subjectName ||
+                      subject.name ||
+                      subject.title ||
+                      'Subject',
                   };
-                }
+                })
+                .filter(
+                  (subject) =>
+                    subject?._id
+                )
+            : [];
 
-                return {
-                  _id:
-                    subject._id ||
-                    subject.id ||
-                    '',
-                  name:
-                    subject.name ||
-                    subject.subjectName ||
-                    subject.title ||
-                    'Subject',
-                  subjectName:
-                    subject.subjectName ||
-                    subject.name ||
-                    subject.title ||
-                    'Subject',
-                };
-              })
-              .filter((subject) => subject?._id)
-          : [];
-
-        setSubjects(normalizedSubjects);
+        setSubjects(
+          normalizedSubjects
+        );
       } catch (error) {
         console.error(
           'Failed to load subjects:',
@@ -282,9 +252,10 @@ export default function ResultsUpload() {
     loadSubjects();
   }, [selectedSectionId]);
 
-  // ─────────────────────────────────────────────
-  // LOAD STUDENTS WHEN CLASS CHANGES
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     LOAD STUDENTS
+  ======================================================= */
+
   useEffect(() => {
     if (!selectedClass) {
       setStudents([]);
@@ -293,62 +264,48 @@ export default function ResultsUpload() {
     }
 
     const loadStudents = async () => {
-      setStudentsLoading(true);
-
       try {
-        const res =
+        setStudentsLoading(true);
+
+        const response =
           await teacherAPI.getClassStudents(
             selectedClass
           );
 
         const classStudents =
-          res?.data?.students || [];
+          response?.data?.students || [];
 
         setStudents(classStudents);
-
-        // Create empty spreadsheet cells
-        const initialData = {};
-
-        classStudents.forEach((student) => {
-          initialData[student._id] = {};
-
-          subjects.forEach((subject) => {
-            initialData[student._id][
-              subject._id
-            ] = {
-              firstCA: '',
-              secondCA: '',
-              examScore: '',
-            };
-          });
-        });
-
-        setManualResults(initialData);
       } catch (error) {
         console.error(
           'Failed to load students:',
           error
         );
 
+        setStudents([]);
+
         toast.error(
           error?.response?.data?.message ||
             'Failed to load students'
         );
-
-        setStudents([]);
       } finally {
         setStudentsLoading(false);
       }
     };
 
     loadStudents();
-  }, [selectedClass, subjects]);
+  }, [selectedClass]);
 
-  // ─────────────────────────────────────────────
-  // RESET MANUAL CELLS WHEN SUBJECTS CHANGE
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     INITIALIZE MANUAL RESULT CELLS
+  ======================================================= */
+
   useEffect(() => {
-    if (!students.length || !subjects.length) {
+    if (
+      !students.length ||
+      !subjects.length
+    ) {
+      setManualResults({});
       return;
     }
 
@@ -358,7 +315,9 @@ export default function ResultsUpload() {
       initialData[student._id] = {};
 
       subjects.forEach((subject) => {
-        initialData[student._id][subject._id] = {
+        initialData[student._id][
+          subject._id
+        ] = {
           firstCA: '',
           secondCA: '',
           examScore: '',
@@ -367,154 +326,174 @@ export default function ResultsUpload() {
     });
 
     setManualResults(initialData);
-  }, [subjects]);
+  }, [students, subjects]);
 
-  // ─────────────────────────────────────────────
-  // DOWNLOAD EXCEL TEMPLATE
-  // Uses subjects from selected section
-  // ─────────────────────────────────────────────
-  const handleDownloadTemplate = async () => {
-    if (!selectedClass) {
-      toast.error('Select a class first');
-      return;
-    }
+  /* =======================================================
+     DOWNLOAD EXCEL TEMPLATE
+  ======================================================= */
 
-    if (!term) {
-      toast.error('Select a term first');
-      return;
-    }
-
-    if (!subjects.length) {
-      toast.error(
-        'No subjects found for this class section'
-      );
-      return;
-    }
-
-    setTemplateLoading(true);
-
-    try {
-      const classObj = classes.find(
-        (c) => c._id === selectedClass
-      );
-
-      const className =
-        classObj?.name || 'Class';
-
-      const res =
-        await teacherAPI.getClassStudents(
-          selectedClass
-        );
-
-      const classStudents =
-        res?.data?.students || [];
-
-      if (!classStudents.length) {
+  const handleDownloadTemplate =
+    async () => {
+      if (!selectedClass) {
         toast.error(
-          'No students found in this class'
+          'Select a class first'
         );
         return;
       }
 
-      const subjectCols = subjects.map(
-        (subject) =>
-          subject.name ||
-          subject.subjectName
-      );
+      if (!term) {
+        toast.error(
+          'Select a term first'
+        );
+        return;
+      }
 
-      const headers = [
-        'Reg No',
-        'Term',
-        'Class',
-        ...subjectCols,
-      ];
+      if (!subjects.length) {
+        toast.error(
+          'No subjects found for this class section'
+        );
+        return;
+      }
 
-      const dataRows = classStudents.map(
-        (student) => {
-          const row = {
-            'Reg No':
-              student.registrationNumber ||
-              '',
-            Term: term,
-            Class: className,
-          };
+      setTemplateLoading(true);
 
-          subjectCols.forEach((subject) => {
-            row[subject] = '';
-          });
+      try {
+        const classObj =
+          classes.find(
+            (classItem) =>
+              classItem._id ===
+              selectedClass
+          );
 
-          return row;
+        const className =
+          classObj?.name || 'Class';
+
+        const response =
+          await teacherAPI.getClassStudents(
+            selectedClass
+          );
+
+        const classStudents =
+          response?.data?.students || [];
+
+        if (!classStudents.length) {
+          toast.error(
+            'No students found in this class'
+          );
+          return;
         }
-      );
 
-      const ws =
-        XLSX.utils.json_to_sheet(
-          dataRows,
-          {
-            header: headers,
-          }
+        const subjectColumns =
+          subjects.map(
+            (subject) =>
+              subject.name ||
+              subject.subjectName
+          );
+
+        const headers = [
+          'Reg No',
+          'Term',
+          'Class',
+          ...subjectColumns,
+        ];
+
+        const dataRows =
+          classStudents.map(
+            (student) => {
+              const row = {
+                'Reg No':
+                  student.registrationNumber ||
+                  '',
+
+                Term: term,
+
+                Class: className,
+              };
+
+              subjectColumns.forEach(
+                (subject) => {
+                  row[subject] = '';
+                }
+              );
+
+              return row;
+            }
+          );
+
+        const worksheet =
+          XLSX.utils.json_to_sheet(
+            dataRows,
+            {
+              header: headers,
+            }
+          );
+
+        worksheet['!cols'] =
+          headers.map(
+            (header) => ({
+              wch: Math.max(
+                String(header).length +
+                  4,
+                14
+              ),
+            })
+          );
+
+        const workbook =
+          XLSX.utils.book_new();
+
+        XLSX.utils.book_append_sheet(
+          workbook,
+          worksheet,
+          'Results'
         );
 
-      ws['!cols'] = headers.map((header) => ({
-        wch: Math.max(
-          String(header).length + 4,
-          14
-        ),
-      }));
+        const safeClassName =
+          className.replace(
+            /\s/g,
+            '_'
+          );
 
-      const wb = XLSX.utils.book_new();
+        const safeTerm =
+          term.replace(
+            /\s/g,
+            '_'
+          );
 
-      XLSX.utils.book_append_sheet(
-        wb,
-        ws,
-        'Results'
-      );
+        XLSX.writeFile(
+          workbook,
+          `Result_Template_${safeClassName}_${safeTerm}.xlsx`
+        );
 
-      XLSX.writeFile(
-        wb,
-        `Result_Template_${className.replace(
-          /\s/g,
-          '_'
-        )}_${term.replace(/\s/g, '_')}.xlsx`
-      );
+        toast.success(
+          `Template downloaded — ${classStudents.length} student(s), ${subjects.length} subject(s)`
+        );
+      } catch (error) {
+        console.error(
+          'Template error:',
+          error
+        );
 
-      toast.success(
-        `Template downloaded — ${classStudents.length} student(s), ${subjects.length} subject(s)`
-      );
-    } catch (error) {
-      console.error(error);
+        toast.error(
+          error?.response?.data?.message ||
+            'Failed to generate template'
+        );
+      } finally {
+        setTemplateLoading(false);
+      }
+    };
 
-      toast.error(
-        error?.response?.data?.message ||
-          'Failed to generate template'
-      );
-    } finally {
-      setTemplateLoading(false);
-    }
-  };
+  /* =======================================================
+     FILE SELECT
+  ======================================================= */
 
-  // ── File select ────────────────────────────────────────────────────────────
-  const handleFileSelect = e => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
-    if (!selected.name.match(/\.(xlsx|xls)$/i)) { toast.error('Only .xlsx / .xls files allowed'); return; }
-    if (selected.size > 10 * 1024 * 1024)        { toast.error('File must be under 10 MB'); return; }
-    setFile(selected);
-  };
-
-  // ── Fetch Google Sheet ─────────────────────────────────────────────────────
-  const handleFetchSheet = async () => {
-    if (!sheetsUrl.trim()) { toast.error('Paste a Google Sheets link first'); return; }
-    if (!sheetsUrl.includes('docs.google.com/spreadsheets')) {
-      toast.error('That does not look like a Google Sheets URL'); return;
-  // ─────────────────────────────────────────────
-  // FILE SELECT
-  // ─────────────────────────────────────────────
-  const handleFileSelect = (e) => {
+  const handleFileSelect = (event) => {
     const selected =
-      e.target.files?.[0];
+      event.target.files?.[0];
 
-    if (!selected) return;
+    if (!selected) {
+      return;
+    }
 
     if (
       !selected.name.match(
@@ -524,6 +503,7 @@ export default function ResultsUpload() {
       toast.error(
         'Only .xlsx / .xls files allowed'
       );
+
       return;
     }
 
@@ -534,122 +514,122 @@ export default function ResultsUpload() {
       toast.error(
         'File must be under 10 MB'
       );
+
       return;
     }
 
     setFile(selected);
   };
 
-  // ─────────────────────────────────────────────
-  // GOOGLE SHEETS
-  // ─────────────────────────────────────────────
-  const handleFetchSheet = async () => {
-    if (!sheetsUrl.trim()) {
-      toast.error(
-        'Paste a Google Sheets link first'
-      );
-      return;
-    }
+  /* =======================================================
+     FETCH GOOGLE SHEET
+  ======================================================= */
 
-    if (
-      !sheetsUrl.includes(
-        'docs.google.com/spreadsheets'
-      )
-    ) {
-      toast.error(
-        'That does not look like a Google Sheets URL'
-      );
-      return;
-    }
-
-    setFetchingSheet(true);
-    setSheetPreview(null);
-    setSheetFile(null);
-
-    try {
-      const res  = await teacherAPI.fetchSheetPreview(sheetsUrl.trim());
-      const { rows, base64, sheetName } = res.data;
-
-      if (!rows?.length) { toast.error('Sheet appears to be empty'); return; }
-
-      // Derive headers from first row keys
-      const headers = Object.keys(rows[0]);
-
-      setSheetPreview({ rows, headers, sheetName });
-
-      // Convert base64 → File so we can upload it with the same formData flow
-      const byteArray = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-      const blob      = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      setSheetFile(new File([blob], 'google_sheet_results.xlsx', { type: blob.type }));
-
-      toast.success(`Sheet loaded — ${rows.length} row(s) from "${sheetName}"`);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to fetch sheet. Make sure it is set to "Anyone with the link can view".');
-      const res =
-        await teacherAPI.fetchSheetPreview(
-          sheetsUrl.trim()
-        );
-
-      const {
-        rows,
-        base64,
-        sheetName,
-      } = res.data;
-
-      if (!rows?.length) {
+  const handleFetchSheet =
+    async () => {
+      if (!sheetsUrl.trim()) {
         toast.error(
-          'Sheet appears to be empty'
+          'Paste a Google Sheets link first'
         );
+
         return;
       }
 
-      const headers = Object.keys(
-        rows[0]
-      );
-
-      setSheetPreview({
-        rows,
-        headers,
-        sheetName,
-      });
-
-      const byteArray =
-        Uint8Array.from(
-          atob(base64),
-          (c) => c.charCodeAt(0)
+      if (
+        !sheetsUrl.includes(
+          'docs.google.com/spreadsheets'
+        )
+      ) {
+        toast.error(
+          'That does not look like a Google Sheets URL'
         );
 
-      const blob = new Blob(
-        [byteArray],
-        {
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        return;
+      }
+
+      setFetchingSheet(true);
+      setSheetPreview(null);
+      setSheetFile(null);
+
+      try {
+        const response =
+          await teacherAPI.fetchSheetPreview(
+            sheetsUrl.trim()
+          );
+
+        const {
+          rows,
+          base64,
+          sheetName,
+        } = response.data;
+
+        if (!rows?.length) {
+          toast.error(
+            'Sheet appears to be empty'
+          );
+
+          return;
         }
-      );
 
-      setSheetFile(
-        new File(
-          [blob],
-          'google_sheet_results.xlsx',
+        const headers =
+          Object.keys(rows[0]);
+
+        setSheetPreview({
+          rows,
+          headers,
+          sheetName,
+        });
+
+        /* Convert base64 to File */
+
+        const byteArray =
+          Uint8Array.from(
+            atob(base64),
+            (character) =>
+              character.charCodeAt(0)
+          );
+
+        const blob = new Blob(
+          [byteArray],
           {
-            type: blob.type,
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           }
-        )
-      );
+        );
 
-      toast.success(
-        `Sheet loaded — ${rows.length} row(s) from "${sheetName}"`
-      );
-    } catch (error) {
-      console.error(error);
+        const convertedFile =
+          new File(
+            [blob],
+            'google_sheet_results.xlsx',
+            {
+              type: blob.type,
+            }
+          );
 
-      toast.error(
-        error?.response?.data?.message ||
-          'Failed to fetch sheet. Make sure it is set to "Anyone with the link can view".'
-      );
-    } finally {
-      setFetchingSheet(false);
-    }
-  };
+        setSheetFile(
+          convertedFile
+        );
+
+        toast.success(
+          `Sheet loaded — ${rows.length} row(s) from "${sheetName}"`
+        );
+      } catch (error) {
+        console.error(
+          'Google Sheet error:',
+          error
+        );
+
+        toast.error(
+          error?.response?.data?.message ||
+            'Failed to fetch sheet. Make sure it is set to "Anyone with the link can view".'
+        );
+      } finally {
+        setFetchingSheet(false);
+      }
+    };
+
+  /* =======================================================
+     CLEAR GOOGLE SHEET
+  ======================================================= */
 
   const clearSheet = () => {
     setSheetPreview(null);
@@ -657,202 +637,147 @@ export default function ResultsUpload() {
     setSheetsUrl('');
   };
 
-  // ── Upload ─────────────────────────────────────────────────────────────────
-  const handleUpload = async () => {
-    const uploadFile = mode === 'file' ? file : sheetFile;
-    if (!uploadFile)      { toast.error('No file ready to upload'); return; }
-    if (!selectedClass)   { toast.error('Select a class'); return; }
-    if (!term)            { toast.error('Select a term'); return; }
-  // ─────────────────────────────────────────────
-  // NORMAL EXCEL UPLOAD
-  // ─────────────────────────────────────────────
-  const handleUpload = async () => {
-    const uploadFile =
-      mode === 'file'
-        ? file
-        : sheetFile;
+  /* =======================================================
+     EXCEL / GOOGLE SHEETS UPLOAD
+  ======================================================= */
 
-    if (!uploadFile) {
-      toast.error(
-        'No file ready to upload'
-      );
-      return;
-    }
+  const handleUpload =
+    async () => {
+      const uploadFile =
+        mode === 'file'
+          ? file
+          : sheetFile;
 
-    if (!selectedClass) {
-      toast.error('Select a class');
-      return;
-    }
+      if (!uploadFile) {
+        toast.error(
+          'No file ready to upload'
+        );
 
-    if (!term) {
-      toast.error('Select a term');
-      return;
-    }
-
-    setLoading(true);
-    setUploadProgress(0);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', uploadFile);
-      formData.append('classId', selectedClass);
-      formData.append('term', term);
-      if (session) formData.append('session', session);
-
-      const interval = setInterval(() => {
-        setUploadProgress(p => p >= 90 ? p : p + 10);
-      }, 250);
-
-      const res = await teacherAPI.uploadResults(formData);
-      clearInterval(interval);
-      setUploadProgress(100);
-
-      toast.success(res?.data?.message || 'Results uploaded successfully');
-      if (res?.data?.notFound?.length) {
-        toast.warn(`${res.data.notFound.length} reg number(s) not matched: ${res.data.notFound.join(', ')}`);
+        return;
       }
 
-      setTimeout(() => {
-        setFile(null); setSheetPreview(null); setSheetFile(null);
-        setSheetsUrl(''); setSelectedClass(''); setTerm(''); setSession('');
-        setUploadProgress(0);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }, 1500);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Upload failed');
-    let interval;
+      if (!selectedClass) {
+        toast.error(
+          'Select a class'
+        );
 
-    try {
-      const formData =
-        new FormData();
+        return;
+      }
 
-      formData.append(
-        'file',
-        uploadFile
-      );
+      if (!term) {
+        toast.error(
+          'Select a term'
+        );
 
-      formData.append(
-        'classId',
-        selectedClass
-      );
+        return;
+      }
 
-      formData.append(
-        'term',
-        term
-      );
+      setLoading(true);
+      setUploadProgress(0);
 
-      if (session) {
+      let interval;
+
+      try {
+        const formData =
+          new FormData();
+
         formData.append(
-          'session',
-          session
-        );
-      }
-
-      interval = setInterval(() => {
-        setUploadProgress((progress) =>
-          progress >= 90
-            ? progress
-            : progress + 10
-        );
-      }, 250);
-
-      const res =
-        await teacherAPI.uploadResults(
-          formData
+          'file',
+          uploadFile
         );
 
-      clearInterval(interval);
-
-      setUploadProgress(100);
-
-      toast.success(
-        res?.data?.message ||
-          'Results uploaded successfully'
-      );
-
-      if (
-        res?.data?.notFound?.length
-      ) {
-        toast.warn(
-          `${res.data.notFound.length} reg number(s) not matched: ${res.data.notFound.join(', ')}`
+        formData.append(
+          'classId',
+          selectedClass
         );
-      }
 
-      setTimeout(() => {
-        setFile(null);
-        setSheetPreview(null);
-        setSheetFile(null);
-        setSheetsUrl('');
-        setSelectedClass('');
-        setTerm('');
-        setSession('');
-        setUploadProgress(0);
+        formData.append(
+          'term',
+          term
+        );
+
+        if (session) {
+          formData.append(
+            'session',
+            session
+          );
+        }
+
+        interval = setInterval(
+          () => {
+            setUploadProgress(
+              (progress) =>
+                progress >= 90
+                  ? progress
+                  : progress + 10
+            );
+          },
+          250
+        );
+
+        const response =
+          await teacherAPI.uploadResults(
+            formData
+          );
+
+        clearInterval(interval);
+
+        setUploadProgress(100);
+
+        toast.success(
+          response?.data?.message ||
+            'Results uploaded successfully'
+        );
 
         if (
-          fileInputRef.current
+          response?.data?.notFound
+            ?.length
         ) {
-          fileInputRef.current.value =
-            '';
+          toast.warn(
+            `${response.data.notFound.length} reg number(s) not matched: ${response.data.notFound.join(', ')}`
+          );
         }
-      }, 1500);
-    } catch (error) {
-      if (interval) {
-        clearInterval(interval);
+
+        setTimeout(() => {
+          setFile(null);
+          setSheetPreview(null);
+          setSheetFile(null);
+          setSheetsUrl('');
+          setSelectedClass('');
+          setTerm('');
+          setSession('');
+          setUploadProgress(0);
+
+          if (
+            fileInputRef.current
+          ) {
+            fileInputRef.current.value =
+              '';
+          }
+        }, 1500);
+      } catch (error) {
+        if (interval) {
+          clearInterval(interval);
+        }
+
+        console.error(
+          'Upload error:',
+          error
+        );
+
+        toast.error(
+          error?.response?.data?.message ||
+            'Upload failed'
+        );
+      } finally {
+        setLoading(false);
       }
+    };
 
-      console.error(error);
+  /* =======================================================
+     GET CELL VALUE
+  ======================================================= */
 
-      toast.error(
-        error?.response?.data?.message ||
-          'Upload failed'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const readyToUpload = (mode === 'file' ? !!file : !!sheetFile) && !!selectedClass && !!term;
-
-  return (
-    <MainLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
-
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Upload Results</h1>
-          <p className="text-gray-500 mt-1">Upload via Excel file or paste a Google Sheets link.</p>
-        </div>
-
-        {/* Mode tabs */}
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-          {MODES.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => { setMode(id); setSheetPreview(null); setSheetFile(null); setFile(null); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                mode === id ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Icon size={15} /> {label}
-            </button>
-          ))}
-        </div>
-
-        <div className={`gap-6 ${sheetPreview ? 'grid grid-cols-1 xl:grid-cols-2' : 'flex flex-col'}`}>
-
-          {/* ── LEFT: form ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
-
-            {/* CLASS */}
-            <div>
-              <label className="block text-sm font-semibold mb-1">Class *</label>
-              <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="">Select class</option>
-                {classes.map(cls => <option key={cls._id} value={cls._id}>{cls.name}</option>)}
-              </select>
-  // ─────────────────────────────────────────────
-  // GET CELL VALUE
-  // ─────────────────────────────────────────────
   const getCellValue = (
     studentId,
     subjectId,
@@ -865,9 +790,10 @@ export default function ResultsUpload() {
     );
   };
 
-  // ─────────────────────────────────────────────
-  // CHANGE SCORE
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     CHANGE SCORE
+  ======================================================= */
+
   const handleScoreChange = (
     studentId,
     subjectId,
@@ -895,39 +821,45 @@ export default function ResultsUpload() {
     }
 
     if (Number(value) > max) {
-      toast.warning(
-        `${
-          field === 'examScore'
-            ? 'Exam'
-            : field === 'firstCA'
+      const fieldName =
+        field === 'examScore'
+          ? 'Exam'
+          : field === 'firstCA'
             ? '1st CA'
-            : '2nd CA'
-        } cannot be more than ${max}`
+            : '2nd CA';
+
+      toast.warning(
+        `${fieldName} cannot be more than ${max}`
       );
 
       value = String(max);
     }
 
-    setManualResults((prev) => ({
-      ...prev,
+    setManualResults(
+      (previous) => ({
+        ...previous,
 
-      [studentId]: {
-        ...(prev[studentId] || {}),
-
-        [subjectId]: {
-          ...(prev[studentId]?.[
-            subjectId
+        [studentId]: {
+          ...(previous[
+            studentId
           ] || {}),
 
-          [field]: value,
+          [subjectId]: {
+            ...(previous[
+              studentId
+            ]?.[subjectId] || {}),
+
+            [field]: value,
+          },
         },
-      },
-    }));
+      })
+    );
   };
 
-  // ─────────────────────────────────────────────
-  // SUBJECT TOTAL
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     SUBJECT TOTAL
+  ======================================================= */
+
   const getSubjectTotal = (
     studentId,
     subjectId
@@ -966,22 +898,37 @@ export default function ResultsUpload() {
     );
   };
 
-  // ─────────────────────────────────────────────
-  // GRADE
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     GRADE
+  ======================================================= */
+
   const getGrade = (total) => {
-    if (total >= 70) return 'A';
-    if (total >= 60) return 'B';
-    if (total >= 50) return 'C';
-    if (total >= 45) return 'D';
+    if (total >= 70) {
+      return 'A';
+    }
+
+    if (total >= 60) {
+      return 'B';
+    }
+
+    if (total >= 50) {
+      return 'C';
+    }
+
+    if (total >= 45) {
+      return 'D';
+    }
 
     return 'F';
   };
 
-  // ─────────────────────────────────────────────
-  // GRADE STYLE
-  // ─────────────────────────────────────────────
-  const getGradeStyle = (grade) => {
+  /* =======================================================
+     GRADE STYLE
+  ======================================================= */
+
+  const getGradeStyle = (
+    grade
+  ) => {
     switch (grade) {
       case 'A':
         return 'bg-green-100 text-green-700';
@@ -1000,187 +947,200 @@ export default function ResultsUpload() {
     }
   };
 
-  // ─────────────────────────────────────────────
-  // SUBMIT MANUAL RESULTS
-  // ─────────────────────────────────────────────
-  const handleManualSubmit = async () => {
-    if (!selectedClass) {
-      toast.error(
-        'Select a class first'
-      );
-      return;
-    }
+  /* =======================================================
+     SUBMIT MANUAL RESULTS
+  ======================================================= */
 
-    if (!term) {
-      toast.error(
-        'Select a term first'
-      );
-      return;
-    }
-
-    if (!session) {
-      toast.error(
-        'Enter the academic session'
-      );
-      return;
-    }
-
-    if (!students.length) {
-      toast.error(
-        'No students found'
-      );
-      return;
-    }
-
-    if (!subjects.length) {
-      toast.error(
-        'No subjects found for this class section'
-      );
-      return;
-    }
-
-    // Make sure every subject has a real MongoDB ID
-    const invalidSubject =
-      subjects.find(
-        (subject) =>
-          !subject._id
-      );
-
-    if (invalidSubject) {
-      toast.error(
-        'One or more subjects do not have a valid ID'
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const formattedResults =
-        students.map(
-          (student) => ({
-            studentUid:
-              student.registrationNumber,
-
-            subjects:
-              subjects.map(
-                (subject) => ({
-                  subjectId:
-                    subject._id,
-
-                  subjectName:
-                    subject.name ||
-                    subject.subjectName,
-
-                  firstCA:
-                    Number(
-                      getCellValue(
-                        student._id,
-                        subject._id,
-                        'firstCA'
-                      )
-                    ) || 0,
-
-                  secondCA:
-                    Number(
-                      getCellValue(
-                        student._id,
-                        subject._id,
-                        'secondCA'
-                      )
-                    ) || 0,
-
-                  examScore:
-                    Number(
-                      getCellValue(
-                        student._id,
-                        subject._id,
-                        'examScore'
-                      )
-                    ) || 0,
-                })
-              ),
-          })
+  const handleManualSubmit =
+    async () => {
+      if (!selectedClass) {
+        toast.error(
+          'Select a class first'
         );
 
-      const payload = {
-        classId:
-          selectedClass,
+        return;
+      }
 
-        term,
+      if (!term) {
+        toast.error(
+          'Select a term first'
+        );
 
-        session,
+        return;
+      }
 
-        results:
-          formattedResults,
-      };
+      if (!session) {
+        toast.error(
+          'Enter the academic session'
+        );
 
-      console.log(
-        'MANUAL RESULT PAYLOAD:',
-        payload
-      );
+        return;
+      }
 
-      const res =
-        await teacherAPI.inputResult(
+      if (!students.length) {
+        toast.error(
+          'No students found'
+        );
+
+        return;
+      }
+
+      if (!subjects.length) {
+        toast.error(
+          'No subjects found for this class section'
+        );
+
+        return;
+      }
+
+      const invalidSubject =
+        subjects.find(
+          (subject) =>
+            !subject._id
+        );
+
+      if (invalidSubject) {
+        toast.error(
+          'One or more subjects do not have a valid ID'
+        );
+
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const formattedResults =
+          students.map(
+            (student) => ({
+              studentUid:
+                student.registrationNumber,
+
+              subjects:
+                subjects.map(
+                  (subject) => ({
+                    subjectId:
+                      subject._id,
+
+                    subjectName:
+                      subject.name ||
+                      subject.subjectName,
+
+                    firstCA:
+                      Number(
+                        getCellValue(
+                          student._id,
+                          subject._id,
+                          'firstCA'
+                        )
+                      ) || 0,
+
+                    secondCA:
+                      Number(
+                        getCellValue(
+                          student._id,
+                          subject._id,
+                          'secondCA'
+                        )
+                      ) || 0,
+
+                    examScore:
+                      Number(
+                        getCellValue(
+                          student._id,
+                          subject._id,
+                          'examScore'
+                        )
+                      ) || 0,
+                  })
+                ),
+            })
+          );
+
+        const payload = {
+          classId:
+            selectedClass,
+
+          term,
+
+          session,
+
+          results:
+            formattedResults,
+        };
+
+        console.log(
+          'MANUAL RESULT PAYLOAD:',
           payload
         );
 
-      toast.success(
-        res?.data?.message ||
-          'Results submitted successfully'
-      );
+        const response =
+          await teacherAPI.inputResult(
+            payload
+          );
 
-      if (
-        res?.data?.notFound?.length
-      ) {
-        toast.warn(
-          `${res.data.notFound.length} student(s) could not be found: ${res.data.notFound.join(', ')}`
+        toast.success(
+          response?.data?.message ||
+            'Results submitted successfully'
         );
-      }
 
-      // Clear scores
-      const cleared = {};
-
-      students.forEach(
-        (student) => {
-          cleared[student._id] =
-            {};
-
-          subjects.forEach(
-            (subject) => {
-              cleared[
-                student._id
-              ][subject._id] = {
-                firstCA: '',
-                secondCA: '',
-                examScore: '',
-              };
-            }
+        if (
+          response?.data?.notFound
+            ?.length
+        ) {
+          toast.warn(
+            `${response.data.notFound.length} student(s) could not be found: ${response.data.notFound.join(', ')}`
           );
         }
-      );
 
-      setManualResults(
-        cleared
-      );
-    } catch (error) {
-      console.error(
-        'MANUAL RESULT ERROR:',
-        error
-      );
+        /* Clear cells */
 
-      toast.error(
-        error?.response?.data?.message ||
-          'Failed to submit results'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        const cleared = {};
 
-  // ─────────────────────────────────────────────
-  // READY STATES
-  // ─────────────────────────────────────────────
+        students.forEach(
+          (student) => {
+            cleared[
+              student._id
+            ] = {};
+
+            subjects.forEach(
+              (subject) => {
+                cleared[
+                  student._id
+                ][
+                  subject._id
+                ] = {
+                  firstCA: '',
+                  secondCA: '',
+                  examScore: '',
+                };
+              }
+            );
+          }
+        );
+
+        setManualResults(
+          cleared
+        );
+      } catch (error) {
+        console.error(
+          'MANUAL RESULT ERROR:',
+          error
+        );
+
+        toast.error(
+          error?.response?.data?.message ||
+            'Failed to submit results'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  /* =======================================================
+     READY STATES
+  ======================================================= */
+
   const readyToUpload =
     (mode === 'file'
       ? !!file
@@ -1195,37 +1155,99 @@ export default function ResultsUpload() {
     students.length > 0 &&
     subjects.length > 0;
 
-  // ─────────────────────────────────────────────
-  // RENDER
-  // ─────────────────────────────────────────────
+  /* =======================================================
+     CHANGE MODE
+  ======================================================= */
+
+  const handleModeChange = (
+    newMode
+  ) => {
+    setMode(newMode);
+
+    setFile(null);
+    setSheetPreview(null);
+    setSheetFile(null);
+    setSheetsUrl('');
+
+    if (
+      fileInputRef.current
+    ) {
+      fileInputRef.current.value =
+        '';
+    }
+  };
+
+  /* =======================================================
+     CHANGE CLASS
+  ======================================================= */
+
+  const handleClassChange = (
+    event
+  ) => {
+    const classId =
+      event.target.value;
+
+    setSelectedClass(classId);
+
+    setSubjects([]);
+    setStudents([]);
+    setManualResults({});
+
+    setFile(null);
+    setSheetPreview(null);
+    setSheetFile(null);
+
+    if (
+      fileInputRef.current
+    ) {
+      fileInputRef.current.value =
+        '';
+    }
+  };
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
+
   return (
     <MainLayout>
       <div className="space-y-6 max-w-[1600px] mx-auto">
 
-        {/* HEADER */}
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Upload Results
           </h1>
 
           <p className="text-gray-500 mt-1">
-            Upload via Excel, Google Sheets, or enter
-            results directly in the spreadsheet.
+            Upload via Excel, Google Sheets,
+            or enter results directly in the
+            spreadsheet.
           </p>
         </div>
 
-        {/* MODE TABS */}
+        {/* =================================================
+            MODE TABS
+        ================================================= */}
+
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
           {MODES.map(
-            ({ id, label, Icon }) => (
+            ({
+              id,
+              label,
+              Icon,
+            }) => (
               <button
                 key={id}
-                onClick={() => {
-                  setMode(id);
-                  setSheetPreview(null);
-                  setSheetFile(null);
-                  setFile(null);
-                }}
+                type="button"
+                onClick={() =>
+                  handleModeChange(
+                    id
+                  )
+                }
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   mode === id
                     ? 'bg-white text-blue-700 shadow-sm'
@@ -1233,77 +1255,85 @@ export default function ResultsUpload() {
                 }`}
               >
                 <Icon size={15} />
+
                 {label}
               </button>
             )
           )}
         </div>
 
-        {/* COMMON FORM */}
+        {/* =================================================
+            COMMON FORM
+        ================================================= */}
+
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
             {/* CLASS */}
+
             <div>
               <label className="block text-sm font-semibold mb-1">
                 Class *
               </label>
 
               <select
-                value={selectedClass}
-                onChange={(e) => {
-                  setSelectedClass(
-                    e.target.value
-                  );
-
-                  setSubjects([]);
-                  setStudents([]);
-                  setManualResults({});
-                }}
+                value={
+                  selectedClass
+                }
+                onChange={
+                  handleClassChange
+                }
                 className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">
                   Select class
                 </option>
 
-                {classes.map((cls) => (
-                  <option
-                    key={cls._id}
-                    value={cls._id}
-                  >
-                    {cls.name}
-                  </option>
-                ))}
+                {classes.map(
+                  (classItem) => (
+                    <option
+                      key={
+                        classItem._id
+                      }
+                      value={
+                        classItem._id
+                      }
+                    >
+                      {
+                        classItem.name
+                      }
+                    </option>
+                  )
+                )}
               </select>
 
-              {/* SECTION INFORMATION */}
               {selectedClassObject && (
                 <p className="text-xs text-gray-400 mt-1">
                   Section:{' '}
-                  {selectedClassObject.section?.name ||
-                    selectedClassObject.sectionName ||
+                  {selectedClassObject
+                    .section
+                    ?.name ||
+                    selectedClassObject
+                      .sectionName ||
                     'Assigned section'}
                 </p>
               )}
             </div>
 
             {/* TERM */}
+
             <div>
-              <label className="block text-sm font-semibold mb-1">Term *</label>
-              <select value={term} onChange={e => setTerm(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="">Select term</option>
-                <option value="First Term">First Term</option>
-                <option value="Second Term">Second Term</option>
-                <option value="Third Term">Third Term</option>
               <label className="block text-sm font-semibold mb-1">
                 Term *
               </label>
 
               <select
                 value={term}
-                onChange={(e) =>
-                  setTerm(e.target.value)
+                onChange={(event) =>
+                  setTerm(
+                    event.target.value
+                  )
                 }
                 className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
               >
@@ -1326,170 +1356,22 @@ export default function ResultsUpload() {
             </div>
 
             {/* SESSION */}
+
             <div>
               <label className="block text-sm font-semibold mb-1">
-                Academic Session <span className="font-normal text-gray-400">(optional)</span>
-              </label>
-              <input type="text" value={session} onChange={e => setSession(e.target.value)}
-                placeholder="e.g. 2024/2025"
-                className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-
-            {/* ── FILE MODE ── */}
-            {mode === 'file' && (
-              <>
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <p className="text-sm font-semibold text-blue-800 mb-1">Step 1 — Download template</p>
-                  <p className="text-xs text-blue-600 mb-3">Select class &amp; term above, then download. Fill scores, then upload below.</p>
-                  <button onClick={handleDownloadTemplate} disabled={templateLoading || !selectedClass || !term}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
-                    <Download size={15} /> {templateLoading ? 'Generating…' : 'Download Template'}
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-1">Step 2 — Upload filled Excel *</label>
-                  <div onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-green-300 bg-green-50 hover:bg-green-100 rounded-2xl p-10 text-center cursor-pointer transition">
-                    <input type="file" hidden ref={fileInputRef} accept=".xlsx,.xls" onChange={handleFileSelect} />
-                    {file ? (
-                      <div className="space-y-2">
-                        <CheckCircle2 className="mx-auto text-green-500" size={48} />
-                        <p className="font-bold text-gray-800">{file.name}</p>
-                        <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Upload className="mx-auto text-green-400" size={44} />
-                        <p className="font-semibold text-gray-700">Click to choose the filled Excel file</p>
-                        <p className="text-sm text-gray-400">.xlsx or .xls — max 10 MB</p>
-                      </div>
-                    )}
-                  </div>
-                  {file && (
-                    <div className="mt-2 flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <FileSpreadsheet className="text-green-600" size={22} />
-                        <span className="text-sm font-medium text-gray-800">{file.name}</span>
-                      </div>
-                      <button onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                        className="p-1 hover:bg-red-100 rounded-lg transition">
-                        <X className="text-red-500" size={17} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* ── SHEETS MODE ── */}
-            {mode === 'sheets' && (
-              <div className="space-y-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                  <p className="text-xs text-amber-700 font-medium">
-                    ⚠️ Make sure the sheet is set to <strong>"Anyone with the link can view"</strong> before fetching.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-1">Google Sheets URL *</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      value={sheetsUrl}
-                      onChange={e => setSheetsUrl(e.target.value)}
-                      placeholder="https://docs.google.com/spreadsheets/d/..."
-                      className="flex-1 border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <button onClick={handleFetchSheet} disabled={fetchingSheet || !sheetsUrl.trim()}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition flex-shrink-0">
-                      {fetchingSheet
-                        ? <><RefreshCw size={15} className="animate-spin" /> Fetching…</>
-                        : <><Eye size={15} /> Fetch & Preview</>
-                      }
-                    </button>
-                  </div>
-                </div>
-
-                {sheetFile && (
-                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="text-green-600" size={20} />
-                      <span className="text-sm font-medium text-gray-800">Sheet loaded — ready to upload</span>
-                    </div>
-                    <button onClick={clearSheet} className="p-1 hover:bg-red-100 rounded-lg transition">
-                      <X className="text-red-500" size={17} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* PROGRESS */}
-            {loading && (
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 font-medium">Uploading…</span>
-                  <span className="text-blue-600 font-bold">{uploadProgress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                  <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                </div>
-              </div>
-            )}
-
-            <button onClick={handleUpload} disabled={loading || !readyToUpload}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? 'Uploading…' : 'Upload Results'}
-            </button>
-          </div>
-
-          {/* ── RIGHT: sheet preview table ── */}
-          {sheetPreview && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-              <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <Table2 size={16} className="text-blue-600" />
-                <p className="text-sm font-semibold text-gray-700">
-                  Preview — {sheetPreview.sheetName} ({sheetPreview.rows.length} rows)
-                </p>
-              </div>
-              <div className="overflow-auto max-h-[520px]">
-                <table className="w-full text-xs border-collapse">
-                  <thead className="sticky top-0 bg-gray-800 text-white">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">#</th>
-                      {sheetPreview.headers.map(h => (
-                        <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sheetPreview.rows.map((row, i) => (
-                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-3 py-2 text-gray-400 font-mono">{i + 1}</td>
-                        {sheetPreview.headers.map(h => (
-                          <td key={h} className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                            {row[h] !== undefined && row[h] !== '' ? String(row[h]) : (
-                              <span className="text-gray-300">—</span>
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-                Academic Session
+                Academic Session{' '}
+                <span className="font-normal text-gray-400">
+                  (required for online input)
+                </span>
               </label>
 
               <input
                 type="text"
                 value={session}
-                onChange={(e) =>
-                  setSession(e.target.value)
+                onChange={(event) =>
+                  setSession(
+                    event.target.value
+                  )
                 }
                 placeholder="e.g. 2026/2027"
                 className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -1498,7 +1380,10 @@ export default function ResultsUpload() {
           </div>
         </div>
 
-        {/* SUBJECT LOADING INFO */}
+        {/* =================================================
+            SUBJECT LOADING
+        ================================================= */}
+
         {selectedClass &&
           subjectsLoading && (
             <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-4 py-3 text-sm">
@@ -1506,25 +1391,34 @@ export default function ResultsUpload() {
                 size={16}
                 className="animate-spin"
               />
-              Loading subjects for this section...
+
+              Loading subjects for this
+              section...
             </div>
           )}
 
-        {/* NO SUBJECTS WARNING */}
+        {/* =================================================
+            NO SUBJECTS
+        ================================================= */}
+
         {selectedClass &&
           !subjectsLoading &&
           subjects.length === 0 && (
             <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-3 text-sm">
-              No subjects have been assigned to this
-              class section yet.
+              No subjects have been
+              assigned to this class
+              section yet.
             </div>
           )}
 
-        {/* ═══════════════════════════════════════
+        {/* =================================================
             FILE MODE
-        ═══════════════════════════════════════ */}
+        ================================================= */}
+
         {mode === 'file' && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
+
+            {/* DOWNLOAD TEMPLATE */}
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <p className="text-sm font-semibold text-blue-800 mb-1">
@@ -1532,12 +1426,14 @@ export default function ResultsUpload() {
               </p>
 
               <p className="text-xs text-blue-600 mb-3">
-                Select class and term above, then
-                download the Excel template using the
-                subjects assigned to that section.
+                Select class and term above,
+                then download the Excel
+                template using the subjects
+                assigned to that section.
               </p>
 
               <button
+                type="button"
                 onClick={
                   handleDownloadTemplate
                 }
@@ -1557,9 +1453,12 @@ export default function ResultsUpload() {
               </button>
             </div>
 
+            {/* FILE UPLOAD */}
+
             <div>
               <label className="block text-sm font-semibold mb-1">
-                Step 2 — Upload filled Excel *
+                Step 2 — Upload filled
+                Excel *
               </label>
 
               <div
@@ -1571,7 +1470,9 @@ export default function ResultsUpload() {
                 <input
                   type="file"
                   hidden
-                  ref={fileInputRef}
+                  ref={
+                    fileInputRef
+                  }
                   accept=".xlsx,.xls"
                   onChange={
                     handleFileSelect
@@ -1591,7 +1492,8 @@ export default function ResultsUpload() {
 
                     <p className="text-sm text-gray-500">
                       {(
-                        file.size / 1024
+                        file.size /
+                        1024
                       ).toFixed(1)}{' '}
                       KB
                     </p>
@@ -1604,12 +1506,13 @@ export default function ResultsUpload() {
                     />
 
                     <p className="font-semibold text-gray-700">
-                      Click to choose the filled
-                      Excel file
+                      Click to choose the
+                      filled Excel file
                     </p>
 
                     <p className="text-sm text-gray-400">
-                      .xlsx or .xls — max 10 MB
+                      .xlsx or .xls —
+                      max 10 MB
                     </p>
                   </div>
                 )}
@@ -1629,8 +1532,11 @@ export default function ResultsUpload() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => {
-                      setFile(null);
+                      setFile(
+                        null
+                      );
 
                       if (
                         fileInputRef.current
@@ -1650,8 +1556,36 @@ export default function ResultsUpload() {
               )}
             </div>
 
+            {/* PROGRESS */}
+
+            {loading && (
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600 font-medium">
+                    Uploading...
+                  </span>
+
+                  <span className="text-blue-600 font-bold">
+                    {uploadProgress}%
+                  </span>
+                </div>
+
+                <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${uploadProgress}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
             <button
-              onClick={handleUpload}
+              type="button"
+              onClick={
+                handleUpload
+              }
               disabled={
                 loading ||
                 !readyToUpload
@@ -1665,17 +1599,21 @@ export default function ResultsUpload() {
           </div>
         )}
 
-        {/* ═══════════════════════════════════════
+        {/* =================================================
             GOOGLE SHEETS MODE
-        ═══════════════════════════════════════ */}
+        ================================================= */}
+
         {mode === 'sheets' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+            {/* SHEET FORM */}
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                 <p className="text-xs text-amber-700 font-medium">
-                  ⚠️ Make sure the sheet is set to{' '}
+                  ⚠️ Make sure the sheet
+                  is set to{' '}
                   <strong>
                     "Anyone with the link can view"
                   </strong>{' '}
@@ -1691,10 +1629,15 @@ export default function ResultsUpload() {
                 <div className="flex gap-2">
                   <input
                     type="url"
-                    value={sheetsUrl}
-                    onChange={(e) =>
+                    value={
+                      sheetsUrl
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       setSheetsUrl(
-                        e.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="https://docs.google.com/spreadsheets/d/..."
@@ -1702,6 +1645,7 @@ export default function ResultsUpload() {
                   />
 
                   <button
+                    type="button"
                     onClick={
                       handleFetchSheet
                     }
@@ -1717,12 +1661,15 @@ export default function ResultsUpload() {
                           size={15}
                           className="animate-spin"
                         />
+
                         Fetching…
                       </>
                     ) : (
                       <>
                         <Eye size={15} />
-                        Fetch & Preview
+
+                        Fetch &
+                        Preview
                       </>
                     )}
                   </button>
@@ -1738,12 +1685,17 @@ export default function ResultsUpload() {
                     />
 
                     <span className="text-sm font-medium text-gray-800">
-                      Sheet loaded — ready to upload
+                      Sheet loaded —
+                      ready to
+                      upload
                     </span>
                   </div>
 
                   <button
-                    onClick={clearSheet}
+                    type="button"
+                    onClick={
+                      clearSheet
+                    }
                     className="p-1 hover:bg-red-100 rounded-lg transition"
                   >
                     <X
@@ -1754,8 +1706,36 @@ export default function ResultsUpload() {
                 </div>
               )}
 
+              {/* PROGRESS */}
+
+              {loading && (
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600 font-medium">
+                      Uploading...
+                    </span>
+
+                    <span className="text-blue-600 font-bold">
+                      {uploadProgress}%
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${uploadProgress}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
-                onClick={handleUpload}
+                type="button"
+                onClick={
+                  handleUpload
+                }
                 disabled={
                   loading ||
                   !readyToUpload
@@ -1763,12 +1743,13 @@ export default function ResultsUpload() {
                 className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading
-                  ? 'Uploading…'
+                  ? `Uploading ${uploadProgress}%…`
                   : 'Upload Results'}
               </button>
             </div>
 
             {/* SHEET PREVIEW */}
+
             {sheetPreview && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
 
@@ -1780,10 +1761,13 @@ export default function ResultsUpload() {
 
                   <p className="text-sm font-semibold text-gray-700">
                     Preview —{' '}
-                    {sheetPreview.sheetName}{' '}
+                    {
+                      sheetPreview.sheetName
+                    }{' '}
                     (
                     {
-                      sheetPreview.rows
+                      sheetPreview
+                        .rows
                         .length
                     }{' '}
                     rows)
@@ -1792,6 +1776,7 @@ export default function ResultsUpload() {
 
                 <div className="overflow-auto max-h-[520px]">
                   <table className="w-full text-xs border-collapse">
+
                     <thead className="sticky top-0 bg-gray-800 text-white">
                       <tr>
                         <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
@@ -1799,12 +1784,18 @@ export default function ResultsUpload() {
                         </th>
 
                         {sheetPreview.headers.map(
-                          (header) => (
+                          (
+                            header
+                          ) => (
                             <th
-                              key={header}
+                              key={
+                                header
+                              }
                               className="px-3 py-2 text-left font-semibold whitespace-nowrap"
                             >
-                              {header}
+                              {
+                                header
+                              }
                             </th>
                           )
                         )}
@@ -1813,30 +1804,49 @@ export default function ResultsUpload() {
 
                     <tbody>
                       {sheetPreview.rows.map(
-                        (row, index) => (
+                        (
+                          row,
+                          index
+                        ) => (
                           <tr
-                            key={index}
+                            key={
+                              index
+                            }
                             className={
-                              index % 2 === 0
+                              index %
+                                2 ===
+                              0
                                 ? 'bg-white'
                                 : 'bg-gray-50'
                             }
                           >
                             <td className="px-3 py-2 text-gray-400 font-mono">
-                              {index + 1}
+                              {index +
+                                1}
                             </td>
 
                             {sheetPreview.headers.map(
-                              (header) => (
+                              (
+                                header
+                              ) => (
                                 <td
-                                  key={header}
+                                  key={
+                                    header
+                                  }
                                   className="px-3 py-2 text-gray-700 whitespace-nowrap"
                                 >
-                                  {row[header] !==
+                                  {row[
+                                    header
+                                  ] !==
                                     undefined &&
-                                  row[header] !== '' ? (
+                                  row[
+                                    header
+                                  ] !==
+                                    '' ? (
                                     String(
-                                      row[header]
+                                      row[
+                                        header
+                                      ]
                                     )
                                   ) : (
                                     <span className="text-gray-300">
@@ -1857,13 +1867,15 @@ export default function ResultsUpload() {
           </div>
         )}
 
-        {/* ═══════════════════════════════════════
+        {/* =================================================
             MANUAL EXCEL MODE
-        ═══════════════════════════════════════ */}
+        ================================================= */}
+
         {mode === 'manual' && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
             {/* TABLE HEADER */}
+
             <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-200">
 
               <div>
@@ -1879,12 +1891,16 @@ export default function ResultsUpload() {
                 </div>
 
                 <p className="text-xs text-gray-500 mt-1">
-                  Subjects are automatically loaded
-                  from the selected class section.
+                  Subjects are
+                  automatically
+                  loaded from the
+                  selected class
+                  section.
                 </p>
               </div>
 
               <button
+                type="button"
                 onClick={
                   handleManualSubmit
                 }
@@ -1903,6 +1919,7 @@ export default function ResultsUpload() {
             </div>
 
             {/* SUBJECT LOADING */}
+
             {subjectsLoading && (
               <div className="flex items-center justify-center py-16">
                 <RefreshCw
@@ -1917,6 +1934,7 @@ export default function ResultsUpload() {
             )}
 
             {/* STUDENT LOADING */}
+
             {studentsLoading &&
               !subjectsLoading && (
                 <div className="flex items-center justify-center py-16">
@@ -1932,6 +1950,7 @@ export default function ResultsUpload() {
               )}
 
             {/* NO CLASS */}
+
             {!studentsLoading &&
               !subjectsLoading &&
               !selectedClass && (
@@ -1942,17 +1961,21 @@ export default function ResultsUpload() {
                   />
 
                   <p className="font-semibold text-gray-600 mt-3">
-                    Select a class to begin
+                    Select a class
+                    to begin
                   </p>
 
                   <p className="text-sm text-gray-400 mt-1">
-                    Students and subjects will
-                    automatically appear.
+                    Students and
+                    subjects will
+                    automatically
+                    appear.
                   </p>
                 </div>
               )}
 
             {/* NO SUBJECTS */}
+
             {!subjectsLoading &&
               selectedClass &&
               !subjects.length && (
@@ -1963,39 +1986,51 @@ export default function ResultsUpload() {
                   />
 
                   <p className="font-semibold text-gray-600 mt-3">
-                    No subjects assigned
+                    No subjects
+                    assigned
                   </p>
 
                   <p className="text-sm text-gray-400 mt-1">
-                    Create or assign subjects to this
-                    class section first.
+                    Create or assign
+                    subjects to this
+                    class section
+                    first.
                   </p>
                 </div>
               )}
 
             {/* NO STUDENTS */}
+
             {!studentsLoading &&
               !subjectsLoading &&
               selectedClass &&
-              subjects.length > 0 &&
+              subjects.length >
+                0 &&
               !students.length && (
                 <div className="py-16 text-center">
                   <p className="font-semibold text-gray-600">
-                    No students found
+                    No students
+                    found
                   </p>
 
                   <p className="text-sm text-gray-400 mt-1">
-                    There are no students assigned to
-                    this class.
+                    There are no
+                    students assigned
+                    to this class.
                   </p>
                 </div>
               )}
 
-            {/* EXCEL TABLE */}
+            {/* =================================================
+                EXCEL TABLE
+            ================================================= */}
+
             {!studentsLoading &&
               !subjectsLoading &&
-              students.length > 0 &&
-              subjects.length > 0 && (
+              students.length >
+                0 &&
+              subjects.length >
+                0 && (
                 <div className="overflow-auto max-h-[650px]">
 
                   <table className="border-collapse min-w-max w-full text-xs">
@@ -2003,6 +2038,7 @@ export default function ResultsUpload() {
                     <thead className="sticky top-0 z-20">
 
                       {/* SUBJECT HEADER */}
+
                       <tr className="bg-gray-800 text-white">
 
                         <th
@@ -2020,25 +2056,36 @@ export default function ResultsUpload() {
                         </th>
 
                         {subjects.map(
-                          (subject) => (
+                          (
+                            subject
+                          ) => (
                             <th
-                              key={subject._id}
+                              key={
+                                subject._id
+                              }
                               colSpan="4"
                               className="border border-gray-600 px-4 py-2 text-center bg-green-700 min-w-[280px]"
                             >
-                              {subject.name}
+                              {
+                                subject.name
+                              }
                             </th>
                           )
                         )}
                       </tr>
 
                       {/* SCORE HEADER */}
+
                       <tr className="bg-gray-100 text-gray-700">
 
                         {subjects.map(
-                          (subject) => (
+                          (
+                            subject
+                          ) => (
                             <Fragment
-                              key={subject._id}
+                              key={
+                                subject._id
+                              }
                             >
                               <th className="border border-gray-300 px-3 py-2 min-w-[70px]">
                                 1st CA
@@ -2069,7 +2116,9 @@ export default function ResultsUpload() {
                           studentIndex
                         ) => (
                           <tr
-                            key={student._id}
+                            key={
+                              student._id
+                            }
                             className={
                               studentIndex %
                                 2 ===
@@ -2080,12 +2129,14 @@ export default function ResultsUpload() {
                           >
 
                             {/* UID */}
+
                             <td className="sticky left-0 z-10 bg-inherit border border-gray-300 px-4 py-3 font-semibold text-green-700">
                               {student.registrationNumber ||
                                 'N/A'}
                             </td>
 
                             {/* NAME */}
+
                             <td className="sticky left-[120px] z-10 bg-inherit border border-gray-300 px-4 py-3 font-medium text-gray-800">
                               {student.firstName ||
                                 ''}{' '}
@@ -2096,8 +2147,11 @@ export default function ResultsUpload() {
                             </td>
 
                             {/* SUBJECTS */}
+
                             {subjects.map(
-                              (subject) => {
+                              (
+                                subject
+                              ) => {
                                 const total =
                                   getSubjectTotal(
                                     student._id,
@@ -2117,6 +2171,7 @@ export default function ResultsUpload() {
                                   >
 
                                     {/* 1ST CA */}
+
                                     <td className="border border-gray-300 p-0">
                                       <input
                                         type="number"
@@ -2128,13 +2183,15 @@ export default function ResultsUpload() {
                                           'firstCA'
                                         )}
                                         onChange={(
-                                          e
+                                          event
                                         ) =>
                                           handleScoreChange(
                                             student._id,
                                             subject._id,
                                             'firstCA',
-                                            e.target.value
+                                            event
+                                              .target
+                                              .value
                                           )
                                         }
                                         className="w-[70px] h-10 px-2 text-center outline-none bg-transparent focus:bg-green-50 focus:ring-2 focus:ring-inset focus:ring-green-500"
@@ -2142,6 +2199,7 @@ export default function ResultsUpload() {
                                     </td>
 
                                     {/* 2ND CA */}
+
                                     <td className="border border-gray-300 p-0">
                                       <input
                                         type="number"
@@ -2153,13 +2211,15 @@ export default function ResultsUpload() {
                                           'secondCA'
                                         )}
                                         onChange={(
-                                          e
+                                          event
                                         ) =>
                                           handleScoreChange(
                                             student._id,
                                             subject._id,
                                             'secondCA',
-                                            e.target.value
+                                            event
+                                              .target
+                                              .value
                                           )
                                         }
                                         className="w-[70px] h-10 px-2 text-center outline-none bg-transparent focus:bg-green-50 focus:ring-2 focus:ring-inset focus:ring-green-500"
@@ -2167,6 +2227,7 @@ export default function ResultsUpload() {
                                     </td>
 
                                     {/* EXAM */}
+
                                     <td className="border border-gray-300 p-0">
                                       <input
                                         type="number"
@@ -2178,13 +2239,15 @@ export default function ResultsUpload() {
                                           'examScore'
                                         )}
                                         onChange={(
-                                          e
+                                          event
                                         ) =>
                                           handleScoreChange(
                                             student._id,
                                             subject._id,
                                             'examScore',
-                                            e.target.value
+                                            event
+                                              .target
+                                              .value
                                           )
                                         }
                                         className="w-[70px] h-10 px-2 text-center outline-none bg-transparent focus:bg-green-50 focus:ring-2 focus:ring-inset focus:ring-green-500"
@@ -2192,8 +2255,10 @@ export default function ResultsUpload() {
                                     </td>
 
                                     {/* TOTAL */}
+
                                     <td className="border border-gray-300 px-2 text-center">
                                       <div className="flex flex-col items-center justify-center gap-1">
+
                                         <span className="font-bold text-gray-800">
                                           {total}
                                         </span>
@@ -2203,11 +2268,13 @@ export default function ResultsUpload() {
                                             grade
                                           )}`}
                                         >
-                                          {grade}
+                                          {
+                                            grade
+                                          }
                                         </span>
+
                                       </div>
                                     </td>
-
                                   </Fragment>
                                 );
                               }
@@ -2221,23 +2288,33 @@ export default function ResultsUpload() {
                 </div>
               )}
 
-            {/* BOTTOM ACTION */}
-            {students.length > 0 &&
-              subjects.length > 0 && (
+            {/* =================================================
+                BOTTOM ACTION
+            ================================================= */}
+
+            {students.length >
+              0 &&
+              subjects.length >
+                0 && (
                 <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 bg-gray-50">
 
                   <div className="text-xs text-gray-500">
                     <strong>
-                      {students.length}
+                      {
+                        students.length
+                      }
                     </strong>{' '}
                     students ·{' '}
                     <strong>
-                      {subjects.length}
+                      {
+                        subjects.length
+                      }
                     </strong>{' '}
                     subjects
                   </div>
 
                   <button
+                    type="button"
                     onClick={
                       handleManualSubmit
                     }
