@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from '../context/AuthContext';
@@ -59,7 +58,6 @@ const WithLayout = ({ Page, role }) => (
     <Page />
   </MainLayout>
 );
-=======
 import {
   BrowserRouter,
   Routes,
@@ -127,7 +125,6 @@ import PrincipalGenerateCumulative from "../pages/PrincipalGenerateCumulative";
 
 /* ============================================================
    AI GLOBAL WRAPPER
-============================================================ */
 
 function GlobalAIAssistant() {
   const location = useLocation();
@@ -147,15 +144,12 @@ function GlobalAIAssistant() {
 
 /* ============================================================
    ROUTES
-============================================================ */
->>>>>>> a665f935 (Update school management frontend)
 
 export function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
 
   return (
     <Routes>
-<<<<<<< HEAD
       {/* ── Public ── */}
       <Route path="/"           element={isAuthenticated ? <Navigate to={`/${user?.role}/dashboard`} /> : <Navigate to="/login" replace />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to={`/${user?.role}/dashboard`} /> : <LoginPage />} />
@@ -299,7 +293,6 @@ export function AppRoutes() {
 
       {/* ── Catch-all ── */}
       <Route path="*" element={<Navigate to="/" replace />} />
-=======
 
       {/* ================= PUBLIC ================= */}
 
@@ -692,29 +685,21 @@ export function AppRoutes() {
         element={<Navigate to="/" replace />}
       />
 
->>>>>>> a665f935 (Update school management frontend)
     </Routes>
   );
 }
 
-<<<<<<< HEAD
-=======
 
 /* ============================================================
    ROOT ROUTER
-============================================================ */
 
->>>>>>> a665f935 (Update school management frontend)
 export default function Router() {
   return (
     <BrowserRouter>
       <AppRoutes />
-<<<<<<< HEAD
-=======
 
       {/* ONE AI INSTANCE FOR THE ENTIRE PORTAL */}
       <GlobalAIAssistant />
->>>>>>> a665f935 (Update school management frontend)
     </BrowserRouter>
   );
 }

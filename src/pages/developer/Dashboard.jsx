@@ -30,14 +30,11 @@ function OverviewTab() {
     <div className="space-y-6 max-w-4xl">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[
-<<<<<<< HEAD
           { label: 'Total Admins',   value: '—', color: 'text-purple-600', bg: 'bg-purple-50' },
           { label: 'Active Schools', value: '—', color: 'text-blue-600',   bg: 'bg-blue-50' },
           { label: 'Total Users',    value: '—', color: 'text-emerald-600',bg: 'bg-emerald-50' },
-=======
           { label: 'Total Admins',   value: '1', color: 'text-purple-600', bg: 'bg-purple-50' },
           { label: 'Branch', value: '1', color: 'text-blue-600',   bg: 'bg-blue-50' },
->>>>>>> a665f935 (Update school management frontend)
         ].map(({ label, value, color, bg }) => (
           <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
             <div className={`w-11 h-11 ${bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
@@ -101,7 +98,6 @@ function KeyAccessTab() {
       hour: '2-digit', minute: '2-digit',
     });
 
-<<<<<<< HEAD
     const lines = [
       '╔══════════════════════════════════════════════════╗',
       '║         SCHOOLMS — KEY ACCESS CREDENTIALS        ║',
@@ -116,9 +112,7 @@ function KeyAccessTab() {
       '',
     ];
 
-=======
   
->>>>>>> a665f935 (Update school management frontend)
     const roleOrder = ['developer', 'admin', 'principal', 'hoa', 'secretary'];
 
     roleOrder.forEach(role => {

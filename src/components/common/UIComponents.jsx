@@ -1,5 +1,4 @@
 import { motion, AnimatePresence } from 'framer-motion';
-<<<<<<< HEAD
 
 export const LoadingSpinner = ({ size = 'md', dark = false }) => {
   const s = size === 'sm' ? 16 : size === 'lg' ? 36 : 22;
@@ -25,7 +24,6 @@ export const StatCard = ({ icon, title, value, change, changeType = 'up', color 
       <div className="sms-stat-value">{value}</div>
       <div className="sms-stat-label">{title}</div>
       {change && <div className={`sms-stat-change ${changeType}`}>{changeType === 'up' ? '↑' : '↓'} {change}</div>}
-=======
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -118,17 +116,14 @@ export const StatCard = ({
           {change}
         </div>
       )}
->>>>>>> a665f935 (Update school management frontend)
     </div>
   </motion.div>
 );
 
-<<<<<<< HEAD
 export const Button = ({ children, variant = 'primary', size = '', onClick, disabled, type = 'button', className = '', style = {} }) => (
   <button
     type={type} onClick={onClick} disabled={disabled}
     className={`sms-btn sms-btn-${variant} ${size ? `sms-btn-${size}` : ''} ${className}`}
-=======
 
 /* ─────────────────────────────────────────────
    BUTTON
@@ -151,14 +146,12 @@ export const Button = ({
     className={`sms-btn sms-btn-${variant} ${
       size ? `sms-btn-${size}` : ''
     } ${className}`}
->>>>>>> a665f935 (Update school management frontend)
     style={style}
   >
     {children}
   </button>
 );
 
-<<<<<<< HEAD
 export const Modal = ({ isOpen, onClose, title, children, size = '' }) => (
   <AnimatePresence>
     {isOpen && (
@@ -215,7 +208,6 @@ export const Avatar = ({ name = 'U', color = '#2563eb', size = 'sm' }) => {
     </div>
   );
 };
-=======
 
 /* ─────────────────────────────────────────────
    MODAL
@@ -499,4 +491,3 @@ export const Avatar = ({
     </div>
   );
 };
->>>>>>> a665f935 (Update school management frontend)

@@ -7,7 +7,6 @@ import adminAPI from '../../api/admin.api';
 import toast from 'react-hot-toast';
 import { Building2, Users, CreditCard, TrendingUp, Plus, BarChart3, RefreshCw, Loader2 } from 'lucide-react';
 
-<<<<<<< HEAD
 const BAR_DATA = [
   { month: 'Jan', value: 65 }, { month: 'Feb', value: 72 }, { month: 'Mar', value: 80 },
   { month: 'Apr', value: 74 }, { month: 'May', value: 90 }, { month: 'Jun', value: 85 },
@@ -19,10 +18,8 @@ const FALLBACK_SCHOOLS = [
   { _id: '3', name: 'Bright Future School', location: 'Kano', students: 650, status: 'trial', plan: 'Trial' },
   { _id: '4', name: 'Royal College', location: 'PH', students: 920, status: 'active', plan: 'Premium' },
 ];
-=======
 
 
->>>>>>> a665f935 (Update school management frontend)
 
 export const DeveloperDashboard = () => {
   const { schools, schoolsLoading, fetchSchools, createAdmin, analytics, fetchAnalytics } = useApp();
@@ -47,12 +44,9 @@ export const DeveloperDashboard = () => {
   const displaySchools = schools.length > 0 ? schools : FALLBACK_SCHOOLS;
 
   const stats = analytics ? [
-<<<<<<< HEAD
     { icon: <Building2 size={20} />, title: 'Total Schools', value: analytics.totalSchools || displaySchools.length, change: '+12% this month', color: '#2563eb' },
     { icon: <Users size={20} />, title: 'Total Users', value: analytics.totalUsers || '1,248', change: '+8% this month', color: '#7c3aed' },
-=======
    
->>>>>>> a665f935 (Update school management frontend)
     { icon: <CreditCard size={20} />, title: 'Subscriptions', value: analytics.activeSubscriptions || '18', change: '2 new', color: '#16a34a' },
     { icon: <TrendingUp size={20} />, title: 'Revenue', value: analytics.revenue || '₦2.4M', change: '+15% this month', color: '#d97706' },
   ] : [

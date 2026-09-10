@@ -7,7 +7,6 @@ import { Check, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function MarkAttendance() {
-<<<<<<< HEAD
   const [selectedDate, setSelectedDate] = useState(
     format(new Date(), 'yyyy-MM-dd')
   );
@@ -77,15 +76,12 @@ export default function MarkAttendance() {
   const presentCount = Object.values(attendance).filter((s) => s === 'present').length;
   const absentCount = Object.values(attendance).filter((s) => s === 'absent').length;
   const leaveCount = Object.values(attendance).filter((s) => s === 'leave').length;
-=======
   // Attendance marking is restricted to HOA. Teachers cannot mark attendance.
   // This page is intentionally disabled. Use the HOA Attendance dashboard instead.
->>>>>>> a665f935 (Update school management frontend)
 
   return (
     <MainLayout>
       <div className="space-y-6">
-<<<<<<< HEAD
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Mark Attendance</h1>
@@ -242,7 +238,6 @@ export default function MarkAttendance() {
             </motion.div>
           </div>
         )}
-=======
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Attendance (Disabled)</h1>
           <p className="text-gray-600 mt-2">
@@ -250,7 +245,6 @@ export default function MarkAttendance() {
             Attendance dashboard to view or modify attendance records.
           </p>
         </div>
->>>>>>> a665f935 (Update school management frontend)
       </div>
     </MainLayout>
   );

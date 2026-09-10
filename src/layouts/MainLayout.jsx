@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-<<<<<<< HEAD
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, FileText,
   ClipboardList, CheckSquare, BarChart3, Shield, UserCog, Award,
@@ -92,7 +91,6 @@ function SidebarContent({ collapsed, mobile, onClose, user, role, navItems, avat
           <button
             onClick={onClose}
             className="ml-auto p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition flex-shrink-0"
-=======
 
 import {
   LayoutDashboard,
@@ -124,7 +122,6 @@ import {
 
 /* =========================================================
    NAVIGATION
-========================================================= */
 
 const NAV = {
   developer: [
@@ -312,7 +309,6 @@ const NAV = {
 
 /* =========================================================
    ROLE COLORS
-========================================================= */
 
 const ROLE_COLORS = {
   developer: 'bg-violet-600',
@@ -327,7 +323,6 @@ const ROLE_COLORS = {
 
 /* =========================================================
    SIDEBAR CONTENT
-========================================================= */
 
 function SidebarContent({
   collapsed,
@@ -358,7 +353,6 @@ function SidebarContent({
 
       {/* =================================================
           BRAND
-      ================================================= */}
 
       <div
         className={[
@@ -473,12 +467,10 @@ function SidebarContent({
               hover:text-slate-900
               transition
             "
->>>>>>> a665f935 (Update school management frontend)
           >
             <X size={18} />
           </button>
         )}
-<<<<<<< HEAD
       </div>
 
       {/* Nav */}
@@ -537,14 +529,12 @@ function SidebarContent({
 
 export default function MainLayout({ children }) {
   const { user, logout } = useAuth();
-=======
 
       </div>
 
 
       {/* =================================================
           NAVIGATION LABEL
-      ================================================= */}
 
       {(!collapsed || mobile) && (
         <div className="px-5 pt-6 pb-2">
@@ -567,7 +557,6 @@ export default function MainLayout({ children }) {
 
       {/* =================================================
           NAVIGATION
-      ================================================= */}
 
       <nav
         className="
@@ -694,7 +683,6 @@ export default function MainLayout({ children }) {
 
       {/* =================================================
           ACADEMIC SESSION CARD
-      ================================================= */}
 
       {(!collapsed || mobile) && (
         <div className="px-4 pb-4">
@@ -755,7 +743,6 @@ export default function MainLayout({ children }) {
 
       {/* =================================================
           USER PROFILE
-      ================================================= */}
 
       <div
         className="
@@ -903,20 +890,17 @@ export default function MainLayout({ children }) {
 
 /* =========================================================
    MAIN LAYOUT
-========================================================= */
 
 export default function MainLayout({ children }) {
 
   const { user, logout } = useAuth();
 
->>>>>>> a665f935 (Update school management frontend)
   const navigate = useNavigate();
   const location = useLocation();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
-<<<<<<< HEAD
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   useEffect(() => {
@@ -947,7 +931,6 @@ export default function MainLayout({ children }) {
         className={[
           'fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity duration-300',
           mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-=======
 
   /* Close mobile sidebar after navigation */
   useEffect(() => {
@@ -1020,7 +1003,6 @@ export default function MainLayout({ children }) {
 
       {/* =================================================
           MOBILE BACKDROP
-      ================================================= */}
 
       <div
         className={[
@@ -1034,12 +1016,10 @@ export default function MainLayout({ children }) {
           mobileOpen
             ? 'opacity-100 pointer-events-auto'
             : 'opacity-0 pointer-events-none',
->>>>>>> a665f935 (Update school management frontend)
         ].join(' ')}
         onClick={() => setMobileOpen(false)}
       />
 
-<<<<<<< HEAD
       {/* Mobile sidebar drawer */}
       <div
         className={[
@@ -1099,11 +1079,9 @@ export default function MainLayout({ children }) {
     </div>
   );
 }
-=======
 
       {/* =================================================
           MOBILE SIDEBAR
-      ================================================= */}
 
       <div
         className={[
@@ -1130,7 +1108,6 @@ export default function MainLayout({ children }) {
 
       {/* =================================================
           DESKTOP SIDEBAR
-      ================================================= */}
 
       <div className="hidden lg:flex flex-shrink-0">
 
@@ -1145,7 +1122,6 @@ export default function MainLayout({ children }) {
 
       {/* =================================================
           SIDEBAR COLLAPSE BUTTON
-      ================================================= */}
 
       <button
         onClick={() =>
@@ -1212,7 +1188,6 @@ export default function MainLayout({ children }) {
 
       {/* =================================================
           MAIN AREA
-      ================================================= */}
 
       <div
         className="
@@ -1226,7 +1201,6 @@ export default function MainLayout({ children }) {
 
         {/* =================================================
             TOP NAVBAR
-        ================================================= */}
 
         <header
           className="
@@ -1312,7 +1286,6 @@ export default function MainLayout({ children }) {
 
         {/* =================================================
             PAGE CONTENT
-        ================================================= */}
 
         <main
           className="
@@ -1332,4 +1305,3 @@ export default function MainLayout({ children }) {
     </div>
   );
 }
->>>>>>> a665f935 (Update school management frontend)

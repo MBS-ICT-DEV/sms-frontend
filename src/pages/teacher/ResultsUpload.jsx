@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import MainLayout from '../../layouts/MainLayout';
@@ -18,7 +17,6 @@ const DEFAULT_SUBJECTS = [
 const MODES = [
   { id: 'file',   label: 'Excel File',     Icon: FileSpreadsheet },
   { id: 'sheets', label: 'Google Sheets',  Icon: Link },
-=======
 import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
 import * as XLSX from 'xlsx';
 
@@ -57,13 +55,11 @@ const MODES = [
     label: 'Input Online - Excel',
     Icon: Table2,
   },
->>>>>>> a665f935 (Update school management frontend)
 ];
 
 export default function ResultsUpload() {
   const [mode, setMode] = useState('file');
 
-<<<<<<< HEAD
   // shared
   const [classes, setClasses]             = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
@@ -117,7 +113,6 @@ export default function ResultsUpload() {
       toast.success(`Template downloaded — fill scores for ${students.length} student(s) then upload`);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to generate template');
-=======
   // ─────────────────────────────────────────────
   // SHARED
   // ─────────────────────────────────────────────
@@ -493,13 +488,11 @@ export default function ResultsUpload() {
         error?.response?.data?.message ||
           'Failed to generate template'
       );
->>>>>>> a665f935 (Update school management frontend)
     } finally {
       setTemplateLoading(false);
     }
   };
 
-<<<<<<< HEAD
   // ── File select ────────────────────────────────────────────────────────────
   const handleFileSelect = e => {
     const selected = e.target.files?.[0];
@@ -514,7 +507,6 @@ export default function ResultsUpload() {
     if (!sheetsUrl.trim()) { toast.error('Paste a Google Sheets link first'); return; }
     if (!sheetsUrl.includes('docs.google.com/spreadsheets')) {
       toast.error('That does not look like a Google Sheets URL'); return;
-=======
   // ─────────────────────────────────────────────
   // FILE SELECT
   // ─────────────────────────────────────────────
@@ -568,7 +560,6 @@ export default function ResultsUpload() {
         'That does not look like a Google Sheets URL'
       );
       return;
->>>>>>> a665f935 (Update school management frontend)
     }
 
     setFetchingSheet(true);
@@ -576,7 +567,6 @@ export default function ResultsUpload() {
     setSheetFile(null);
 
     try {
-<<<<<<< HEAD
       const res  = await teacherAPI.fetchSheetPreview(sheetsUrl.trim());
       const { rows, base64, sheetName } = res.data;
 
@@ -595,7 +585,6 @@ export default function ResultsUpload() {
       toast.success(`Sheet loaded — ${rows.length} row(s) from "${sheetName}"`);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to fetch sheet. Make sure it is set to "Anyone with the link can view".');
-=======
       const res =
         await teacherAPI.fetchSheetPreview(
           sheetsUrl.trim()
@@ -657,7 +646,6 @@ export default function ResultsUpload() {
         error?.response?.data?.message ||
           'Failed to fetch sheet. Make sure it is set to "Anyone with the link can view".'
       );
->>>>>>> a665f935 (Update school management frontend)
     } finally {
       setFetchingSheet(false);
     }
@@ -669,14 +657,12 @@ export default function ResultsUpload() {
     setSheetsUrl('');
   };
 
-<<<<<<< HEAD
   // ── Upload ─────────────────────────────────────────────────────────────────
   const handleUpload = async () => {
     const uploadFile = mode === 'file' ? file : sheetFile;
     if (!uploadFile)      { toast.error('No file ready to upload'); return; }
     if (!selectedClass)   { toast.error('Select a class'); return; }
     if (!term)            { toast.error('Select a term'); return; }
-=======
   // ─────────────────────────────────────────────
   // NORMAL EXCEL UPLOAD
   // ─────────────────────────────────────────────
@@ -702,12 +688,10 @@ export default function ResultsUpload() {
       toast.error('Select a term');
       return;
     }
->>>>>>> a665f935 (Update school management frontend)
 
     setLoading(true);
     setUploadProgress(0);
 
-<<<<<<< HEAD
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
@@ -736,7 +720,6 @@ export default function ResultsUpload() {
       }, 1500);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Upload failed');
-=======
     let interval;
 
     try {
@@ -823,13 +806,11 @@ export default function ResultsUpload() {
         error?.response?.data?.message ||
           'Upload failed'
       );
->>>>>>> a665f935 (Update school management frontend)
     } finally {
       setLoading(false);
     }
   };
 
-<<<<<<< HEAD
   const readyToUpload = (mode === 'file' ? !!file : !!sheetFile) && !!selectedClass && !!term;
 
   return (
@@ -869,7 +850,6 @@ export default function ResultsUpload() {
                 <option value="">Select class</option>
                 {classes.map(cls => <option key={cls._id} value={cls._id}>{cls.name}</option>)}
               </select>
-=======
   // ─────────────────────────────────────────────
   // GET CELL VALUE
   // ─────────────────────────────────────────────
@@ -1305,12 +1285,10 @@ export default function ResultsUpload() {
                     'Assigned section'}
                 </p>
               )}
->>>>>>> a665f935 (Update school management frontend)
             </div>
 
             {/* TERM */}
             <div>
-<<<<<<< HEAD
               <label className="block text-sm font-semibold mb-1">Term *</label>
               <select value={term} onChange={e => setTerm(e.target.value)}
                 className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none">
@@ -1318,7 +1296,6 @@ export default function ResultsUpload() {
                 <option value="First Term">First Term</option>
                 <option value="Second Term">Second Term</option>
                 <option value="Third Term">Third Term</option>
-=======
               <label className="block text-sm font-semibold mb-1">
                 Term *
               </label>
@@ -1345,14 +1322,12 @@ export default function ResultsUpload() {
                 <option value="Third Term">
                   Third Term
                 </option>
->>>>>>> a665f935 (Update school management frontend)
               </select>
             </div>
 
             {/* SESSION */}
             <div>
               <label className="block text-sm font-semibold mb-1">
-<<<<<<< HEAD
                 Academic Session <span className="font-normal text-gray-400">(optional)</span>
               </label>
               <input type="text" value={session} onChange={e => setSession(e.target.value)}
@@ -1507,7 +1482,6 @@ export default function ResultsUpload() {
             </div>
           )}
         </div>
-=======
                 Academic Session
               </label>
 
@@ -2283,7 +2257,6 @@ export default function ResultsUpload() {
               )}
           </div>
         )}
->>>>>>> a665f935 (Update school management frontend)
       </div>
     </MainLayout>
   );

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import adminAPI from '../../api/admin.api';
-<<<<<<< HEAD
 import { CheckSquare, Filter, Users, UserCheck, UserX, RefreshCw } from 'lucide-react';
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -103,7 +102,6 @@ export default function HoaAttendancePage() {
             <CheckSquare size={20} className="text-teal-500 mx-auto mb-2" />
             <p className="text-2xl font-bold text-teal-600">{rate}%</p>
             <p className="text-xs text-gray-500">Attendance Rate</p>
-=======
 
 import {
   CheckSquare,
@@ -403,12 +401,10 @@ export default function HoaAttendancePage() {
                 <p className="text-xs text-gray-500">Students</p>
               </div>
             )}
->>>>>>> a665f935 (Update school management frontend)
           </div>
         </div>
       )}
 
-<<<<<<< HEAD
       {/* Records table */}
       {loading ? (
         <div className="space-y-3">
@@ -465,7 +461,6 @@ export default function HoaAttendancePage() {
           </div>
           <div className="px-5 py-3 border-t border-gray-100 text-xs text-gray-400">
             {records.length} record{records.length !== 1 ? 's' : ''} shown
-=======
       {/* STUDENTS */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="border-b border-gray-100 p-5">
@@ -700,14 +695,10 @@ export default function HoaAttendancePage() {
                 {creatingSection ? 'Creating...' : 'Create Section'}
               </button>
             </div>
->>>>>>> a665f935 (Update school management frontend)
           </div>
         </div>
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
 }
->>>>>>> a665f935 (Update school management frontend)

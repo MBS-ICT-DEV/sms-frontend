@@ -10,7 +10,6 @@ export const adminAPI = {
   createTeacher: (data) => apiClient.post('/admin/create-teacher', data),
   getAllTeachers: () => apiClient.get('/admin/teachers'),
 
-<<<<<<< HEAD
   getClasses: () => apiClient.get('/admin/classes'),
 
   // ✅ FIXED: className standard
@@ -19,7 +18,6 @@ export const adminAPI = {
       name: data.className || data.name,
       capacity: data.capacity,
       section: data.section,
-=======
   getSections: () => apiClient.get('/admin/sections'),
   createSection: (data) => apiClient.post('/admin/create-section', data),
   getSectionById: (sectionId) => apiClient.get(`/admin/sections/${sectionId}`),
@@ -34,16 +32,13 @@ export const adminAPI = {
       sectionId: data.sectionId || data.section,
       section: data.sectionId || data.section,
       capacity: data.capacity,
->>>>>>> a665f935 (Update school management frontend)
       subjects: data.subjects || [],
       teacher: data.teacher || null,
     };
 
     return apiClient.post('/admin/create-class', payload);
   },
-<<<<<<< HEAD
 
-=======
   getAllStudentByClass: (params) => {
     return apiClient.get("/admin/by-class ", {params});
   },
@@ -52,17 +47,13 @@ export const adminAPI = {
   apiClient.get("/admin/attendance/class/students", {
     params,
   }),
->>>>>>> a665f935 (Update school management frontend)
   updateClass: (id, data) => {
     const payload = {
       name: data.className || data.name,
       capacity: data.capacity,
-<<<<<<< HEAD
       section: data.section,
-=======
       sectionId: data.sectionId || data.section,
       section: data.sectionId || data.section,
->>>>>>> a665f935 (Update school management frontend)
       subjects: data.subjects || [],
     };
 
@@ -71,10 +62,7 @@ export const adminAPI = {
 
   deleteClass: (id) => apiClient.delete(`/admin/classes/${id}`),
 
-<<<<<<< HEAD
   // ✅ FIXED: MUST be PUT (your backend uses router.put)
-=======
->>>>>>> a665f935 (Update school management frontend)
   assignTeacherToClass: (data) => {
     return apiClient.put('/admin/assign-teacher', {
       classId: data.classId,
@@ -84,7 +72,6 @@ export const adminAPI = {
   
   getAllStudents: () => apiClient.get('/admin/students'),
   getTeacherClasses: () => apiClient.get('/admin/teacher-classes'),
-<<<<<<< HEAD
 
   // HOA
   createHOA: (data) => apiClient.post('/admin/create-hoa', data),
@@ -92,7 +79,6 @@ export const adminAPI = {
   // Secretary
   createSecretary: (data) => apiClient.post('/admin/create-secretary', data),
   getHoaStats: () => apiClient.get('/admin/hoa/stats'),
-=======
 getStudents: (params) => apiClient.get("/admin/students", { params }),
   // HOA
   createHOA: (data) => apiClient.post('/admin/create-hoa', data),
@@ -204,7 +190,6 @@ createSubjectBulk: (data) =>
   createSecretary: (data) => apiClient.post('/admin/create-secretary', data),
   getHoaStats: () => apiClient.get('/admin/hoa/stats'),
   getStaffStats: (params) => apiClient.get('/admin/staff-stats', {params}),
->>>>>>> a665f935 (Update school management frontend)
   getAttendanceView: (params) => apiClient.get('/admin/attendance', { params }),
   getTeachersResultStatus: (params) => apiClient.get('/admin/teachers/results-status', { params }),
   suspendTeacher: (id) => apiClient.put(`/admin/teachers/${id}/suspend`),

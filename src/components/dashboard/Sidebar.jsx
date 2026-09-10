@@ -10,11 +10,8 @@ const NAV = {
     { name: 'Manage Schools', path: '/developer/schools', icon: <BarChart3 size={18} /> },
     { name: 'Analytics', path: '/developer/analytics', icon: <BarChart3 size={18} /> },
     { name: 'Settings', path: '/developer/settings', icon: <Settings size={18} /> },
-<<<<<<< HEAD
   ],
-=======
   ],  
->>>>>>> a665f935 (Update school management frontend)
   admin: [
     { name: 'Dashboard', path: '/dashboard', icon: <Home size={18} /> },
     { name: 'Classes', path: '/admin/classes', icon: <BookOpen size={18} /> },
@@ -95,16 +92,13 @@ export const Sidebar = ({ collapsed, onToggle }) => {
               {initials}
             </div>
             <div style={{ minWidth: 0 }}>
-<<<<<<< HEAD
               <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullname || user?.name || 'User'}</div>
               <div style={{ fontSize: '0.72rem', color: roleColor, fontWeight: 600, textTransform: 'capitalize', background: roleColor + '18', padding: '0.1rem 0.5rem', borderRadius: 99, display: 'inline-block', marginTop: 2 }}>{user?.role}</div>
-=======
 
               <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullname || user?.name || 'User'}</div>
 
               <div style={{ fontSize: '0.72rem', color: roleColor, fontWeight: 600, textTransform: 'capitalize', background: roleColor + '18', padding: '0.1rem 0.5rem', borderRadius: 99, display: 'inline-block', marginTop: 2 }}>{user?.role}</div>
               
->>>>>>> a665f935 (Update school management frontend)
             </div>
           </div>
         </div>

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-<<<<<<< HEAD
 import { Button, Modal, PageHeader, LoadingSpinner, EmptyState, Card } from '../../components/common/UIComponents';
-=======
 
 import {
   Search,
@@ -28,19 +26,16 @@ import {
   Card,
 } from '../../components/common/UIComponents';
 
->>>>>>> a665f935 (Update school management frontend)
 import MainLayout from '../../layouts/MainLayout';
 import adminAPI from '../../api/admin.api';
 
 export const ClassManagementPage = () => {
   const [classes, setClasses] = useState([]);
-<<<<<<< HEAD
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState(null);
   const [search, setSearch] = useState('');
-=======
   const [sections, setSections] = useState([]);
   const [teachers, setTeachers] = useState([]);
 
@@ -50,31 +45,24 @@ export const ClassManagementPage = () => {
   const [modal, setModal] = useState(null);
   const [search, setSearch] = useState('');
 
->>>>>>> a665f935 (Update school management frontend)
   const [selectedClass, setSelectedClass] = useState(null);
 
   const [form, setForm] = useState({
     name: '',
     capacity: 30,
-<<<<<<< HEAD
     section: '',
     subjects: ''
-=======
     sectionId: '',
     section: '',
     subjects: '',
->>>>>>> a665f935 (Update school management frontend)
   });
 
   const [selectedTeacher, setSelectedTeacher] = useState('');
 
-<<<<<<< HEAD
-=======
   // --------------------------------------------------
   // LOAD DATA
   // --------------------------------------------------
 
->>>>>>> a665f935 (Update school management frontend)
   useEffect(() => {
     loadData();
   }, []);
@@ -82,24 +70,19 @@ export const ClassManagementPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-<<<<<<< HEAD
       const [classesRes, teachersRes] = await Promise.all([
         adminAPI.getClasses(),
-=======
 
       const [classesRes, sectionsRes, teachersRes] = await Promise.all([
         adminAPI.getClasses(),
         adminAPI.getSections(),
->>>>>>> a665f935 (Update school management frontend)
         adminAPI.getAllTeachers(),
       ]);
 
       setClasses(classesRes.data.classes || []);
-<<<<<<< HEAD
       setTeachers(teachersRes.data.teachers || []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load data');
-=======
       setSections(sectionsRes.data.sections || []);
       setTeachers(teachersRes.data.teachers || []);
     } catch (error) {
@@ -107,15 +90,12 @@ export const ClassManagementPage = () => {
         error.response?.data?.message ||
           'Failed to load classes'
       );
->>>>>>> a665f935 (Update school management frontend)
     } finally {
       setLoading(false);
     }
   };
 
-<<<<<<< HEAD
   // CREATE CLASS
-=======
   // --------------------------------------------------
   // RESET FORM
   // --------------------------------------------------
@@ -151,7 +131,6 @@ export const ClassManagementPage = () => {
     setModal('create');
   };
 
->>>>>>> a665f935 (Update school management frontend)
   const handleCreate = async () => {
     if (!form.name.trim()) {
       toast.error('Class name is required');
@@ -161,7 +140,6 @@ export const ClassManagementPage = () => {
     try {
       setSubmitting(true);
 
-<<<<<<< HEAD
       const response = await adminAPI.createClass({
         name: form.name,
         capacity: Number(form.capacity),
@@ -185,7 +163,6 @@ export const ClassManagementPage = () => {
 
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create class');
-=======
       if (!form.sectionId) {
         toast.error('Please select a section');
         return;
@@ -220,15 +197,12 @@ export const ClassManagementPage = () => {
         error.response?.data?.message ||
           'Failed to create class'
       );
->>>>>>> a665f935 (Update school management frontend)
     } finally {
       setSubmitting(false);
     }
   };
 
-<<<<<<< HEAD
   // UPDATE CLASS
-=======
   // --------------------------------------------------
   // EDIT CLASS
   // --------------------------------------------------
@@ -249,14 +223,12 @@ export const ClassManagementPage = () => {
     setModal('edit');
   };
 
->>>>>>> a665f935 (Update school management frontend)
   const handleUpdate = async () => {
     if (!form.name.trim()) {
       toast.error('Class name is required');
       return;
     }
 
-<<<<<<< HEAD
     try {
       setSubmitting(true);
 
@@ -290,7 +262,6 @@ export const ClassManagementPage = () => {
 
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update class');
-=======
     if (!selectedClass?._id) {
       toast.error('No class selected');
       return;
@@ -343,13 +314,11 @@ export const ClassManagementPage = () => {
         error.response?.data?.message ||
           'Failed to update class'
       );
->>>>>>> a665f935 (Update school management frontend)
     } finally {
       setSubmitting(false);
     }
   };
 
-<<<<<<< HEAD
   // DELETE
   const handleDelete = async (classId) => {
     if (!window.confirm('Are you sure you want to delete this class?')) return;
@@ -367,7 +336,6 @@ export const ClassManagementPage = () => {
   const handleAssignTeacher = async () => {
     if (!selectedTeacher) {
       toast.error('Please select a teacher');
-=======
   // --------------------------------------------------
   // DELETE CLASS
   // --------------------------------------------------
@@ -426,7 +394,6 @@ export const ClassManagementPage = () => {
 
     if (!selectedClass?._id) {
       toast.error('No class selected');
->>>>>>> a665f935 (Update school management frontend)
       return;
     }
 
@@ -438,7 +405,6 @@ export const ClassManagementPage = () => {
         teacherId: selectedTeacher,
       });
 
-<<<<<<< HEAD
       const teacher = teachers.find(t => t._id === selectedTeacher);
 
       setClasses(classes.map(c =>
@@ -455,7 +421,6 @@ export const ClassManagementPage = () => {
 
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to assign teacher');
-=======
       const teacher = teachers.find(
         (t) => t._id === selectedTeacher
       );
@@ -481,13 +446,11 @@ export const ClassManagementPage = () => {
         error.response?.data?.message ||
           'Failed to assign teacher'
       );
->>>>>>> a665f935 (Update school management frontend)
     } finally {
       setSubmitting(false);
     }
   };
 
-<<<<<<< HEAD
   const openEditModal = (cls) => {
     setSelectedClass(cls);
 
@@ -522,7 +485,6 @@ export const ClassManagementPage = () => {
       <MainLayout>
         <div className="flex items-center justify-center h-screen">
           <LoadingSpinner size="lg" dark />
-=======
   // --------------------------------------------------
   // SEARCH
   // --------------------------------------------------
@@ -565,13 +527,11 @@ export const ClassManagementPage = () => {
             size="lg"
             dark
           />
->>>>>>> a665f935 (Update school management frontend)
         </div>
       </MainLayout>
     );
   }
 
-<<<<<<< HEAD
   return (
     <MainLayout>
       <PageHeader
@@ -723,7 +683,6 @@ export const ClassManagementPage = () => {
           </Button>
         </div>
       </Modal>
-=======
   // --------------------------------------------------
   // PAGE
   // --------------------------------------------------
@@ -1461,7 +1420,6 @@ export const ClassManagementPage = () => {
 
       {/* ==================================================
           CREATE / EDIT MODAL
-      ================================================== */}
 
      {/* CREATE / EDIT MODAL */}
 <Modal
@@ -1925,7 +1883,6 @@ export const ClassManagementPage = () => {
   </div>
 </Modal>
 
->>>>>>> a665f935 (Update school management frontend)
     </MainLayout>
   );
 };

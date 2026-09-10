@@ -2,14 +2,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from '../layouts/MainLayout';
 import { Upload, ClipboardList, CheckSquare, LayoutDashboard, ArrowRight, BookOpen } from 'lucide-react';
-<<<<<<< HEAD
 
-=======
 import adminAPI from '../api/admin.api';
 import teacherAPI from '../api/teacher.api';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
->>>>>>> a665f935 (Update school management frontend)
 const ActionCard = ({ title, desc, Icon, color, bg, btnLabel, onClick }) => (
   <button
     onClick={onClick}
@@ -27,8 +24,6 @@ const ActionCard = ({ title, desc, Icon, color, bg, btnLabel, onClick }) => (
 );
 
 export default function TeacherDashboard() {
-<<<<<<< HEAD
-=======
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [assignedClasses, setAssignedClasses] = useState([]);
@@ -74,7 +69,6 @@ export default function TeacherDashboard() {
     fetchData();
   }, [selectedClassId]);
 
->>>>>>> a665f935 (Update school management frontend)
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -125,13 +119,11 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
-<<<<<<< HEAD
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
             { label: 'My Classes',   value: '—', color: 'text-blue-600',   bg: 'bg-blue-50',   Icon: BookOpen },
             { label: 'Assignments',  value: '—', color: 'text-purple-600', bg: 'bg-purple-50', Icon: ClipboardList },
-=======
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <label htmlFor="class-select" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
             Select class
@@ -159,7 +151,6 @@ export default function TeacherDashboard() {
           {[
             { label: 'Student No', value: loading ? '...' : stats?.StudentCount ?? 0, color: 'text-blue-600', bg: 'bg-blue-50', Icon: BookOpen },
             { label: 'Assignments', value: '—', color: 'text-purple-600', bg: 'bg-purple-50', Icon: ClipboardList },
->>>>>>> a665f935 (Update school management frontend)
             { label: 'Pending Results', value: '—', color: 'text-orange-600', bg: 'bg-orange-50', Icon: Upload },
           ].map(({ label, value, color, bg, Icon }) => (
             <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
@@ -169,12 +160,9 @@ export default function TeacherDashboard() {
               <div>
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={`text-xl font-bold ${color}`}>{value}</p>
-<<<<<<< HEAD
-=======
                 {label === 'Student No' && (
                   <p className="text-[11px] text-gray-500 mt-1">{selectedClassName}</p>
                 )}
->>>>>>> a665f935 (Update school management frontend)
               </div>
             </div>
           ))}

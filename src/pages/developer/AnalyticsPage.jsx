@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 import { BarChart3, TrendingUp, Users, BookOpen, GraduationCap } from 'lucide-react';
-=======
 import {
   BarChart3,
   TrendingUp,
@@ -25,7 +23,6 @@ import adminAPI from '../../api/admin.api';
 // =============================
 // MONTHLY DATA
 // =============================
->>>>>>> a665f935 (Update school management frontend)
 
 const BAR_DATA = [
   { month: 'Jan', value: 60 },
@@ -38,7 +35,6 @@ const BAR_DATA = [
   { month: 'Aug', value: 92 },
 ];
 
-<<<<<<< HEAD
 const max = Math.max(...BAR_DATA.map(d => d.value));
 
 export const AnalyticsPage = () => {
@@ -89,7 +85,6 @@ export const AnalyticsPage = () => {
           ))}
         </div>
       </div>
-=======
 const max = Math.max(
   ...BAR_DATA.map((item) => item.value)
 );
@@ -295,7 +290,6 @@ export const AnalyticsPage = () => {
 
       {/* ==========================
           HEADER
-      ========================== */}
 
       <div>
 
@@ -312,7 +306,6 @@ export const AnalyticsPage = () => {
 
       {/* ==========================
           STATS
-      ========================== */}
 
       {loading ? (
 
@@ -416,7 +409,6 @@ export const AnalyticsPage = () => {
 
       {/* ==========================
           DONUT ANALYTICS
-      ========================== */}
 
       {!loading && (
 
@@ -425,7 +417,6 @@ export const AnalyticsPage = () => {
 
           {/* ======================
                 PAYMENT OVERVIEW
-          ====================== */}
 
           <div
             className="
@@ -607,7 +598,6 @@ export const AnalyticsPage = () => {
 
           {/* ======================
               TEACHER OVERVIEW
-          ====================== */}
 
           <div
             className="
@@ -713,7 +703,6 @@ export const AnalyticsPage = () => {
 
       {/* ==========================
           REVENUE SUMMARY
-      ========================== */}
 
       {!loading && (
 
@@ -808,14 +797,10 @@ export const AnalyticsPage = () => {
         </div>
 
       )}
->>>>>>> a665f935 (Update school management frontend)
 
     </div>
   );
 };
 
-<<<<<<< HEAD
-=======
 
->>>>>>> a665f935 (Update school management frontend)
 export default AnalyticsPage;

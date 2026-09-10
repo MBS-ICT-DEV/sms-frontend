@@ -443,7 +443,6 @@ const HoaAttendacHistory = () => {
 
       {/* =====================================================
           PAGE HEADER
-      ====================================================== */}
 
       <div>
         <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
@@ -463,7 +462,6 @@ const HoaAttendacHistory = () => {
 
       {/* =====================================================
           FILTER
-      ====================================================== */}
 
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
@@ -548,7 +546,6 @@ const HoaAttendacHistory = () => {
 
       {/* =====================================================
           ATTENDANCE RECORDS
-      ====================================================== */}
 
       {classId && (
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -687,7 +684,6 @@ const HoaAttendacHistory = () => {
 
       {/* =====================================================
           ATTENDANCE MODAL
-      ====================================================== */}
 
       {isModalOpen &&
         selectedDay && (
@@ -705,7 +701,6 @@ const HoaAttendacHistory = () => {
 
               {/* =================================================
                   MODAL HEADER
-              ================================================== */}
 
               <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
 
@@ -759,7 +754,6 @@ const HoaAttendacHistory = () => {
 
               {/* =================================================
                   SUMMARY
-              ================================================== */}
 
               <div className="grid grid-cols-2 gap-3 border-b border-gray-100 bg-gray-50 p-4 sm:grid-cols-4">
 
@@ -815,7 +809,6 @@ const HoaAttendacHistory = () => {
 
               {/* =================================================
                   SEARCH
-              ================================================== */}
 
               <div className="border-b border-gray-100 p-4">
 
@@ -844,7 +837,6 @@ const HoaAttendacHistory = () => {
 
               {/* =================================================
                   TABLE
-              ================================================== */}
 
               <div className="flex-1 overflow-auto">
 
@@ -969,7 +961,6 @@ const HoaAttendacHistory = () => {
 
               {/* =================================================
                   MODAL FOOTER
-              ================================================== */}
 
               <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-5 py-3">
 
