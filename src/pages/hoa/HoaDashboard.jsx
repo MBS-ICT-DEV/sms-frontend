@@ -6,6 +6,10 @@ import {
   Users, UserCog, BookOpen, CreditCard, DollarSign,
   CheckSquare, UserX, TrendingUp, ArrowRight,
 } from 'lucide-react';
+<<<<<<< HEAD
+=======
+import AIAssistant from '../../components/AIAssistant';
+>>>>>>> a665f935 (Update school management frontend)
 
 function StatCard({ icon: Icon, label, value, color, sub }) {
   return (
@@ -65,7 +69,10 @@ export default function HoaDashboard() {
         <h1 className="text-2xl font-bold text-gray-900">Head of Activities</h1>
         <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.fullname}. Here's your school overview.</p>
       </div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> a665f935 (Update school management frontend)
       {/* Stats */}
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

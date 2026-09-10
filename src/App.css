@@ -16,7 +16,215 @@
     outline-offset: 2px;
   }
 }
+<<<<<<< HEAD
 
+=======
+/* ─────────────────────────────────────────────
+   MODAL OVERLAY
+───────────────────────────────────────────── */
+
+.sms-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(15, 23, 42, 0.48);
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+
+/* ─────────────────────────────────────────────
+   MODAL
+───────────────────────────────────────────── */
+
+.sms-modal {
+  width: 100%;
+  max-width: 560px;
+
+  max-height: calc(100vh - 40px);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  background: var(--surface, #ffffff);
+
+  border: 1px solid
+    rgba(148, 163, 184, 0.18);
+
+  border-radius: 18px;
+
+  box-shadow:
+    0 25px 60px rgba(15, 23, 42, 0.18),
+    0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+
+/* MODAL SIZES */
+
+.sms-modal-sm {
+  max-width: 420px;
+}
+
+.sms-modal-lg {
+  max-width: 760px;
+}
+
+.sms-modal-xl {
+  max-width: 1000px;
+}
+
+
+/* ─────────────────────────────────────────────
+   HEADER
+───────────────────────────────────────────── */
+
+.sms-modal-header {
+  min-height: 68px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 22px;
+
+  border-bottom: 1px solid
+    var(--border, #e5e7eb);
+}
+
+.sms-modal-heading {
+  min-width: 0;
+}
+
+.sms-modal-title {
+  margin: 0;
+
+  font-size: 1.05rem;
+  font-weight: 700;
+
+  color: var(--text, #111827);
+
+  line-height: 1.4;
+}
+
+
+/* ─────────────────────────────────────────────
+   CLOSE BUTTON
+───────────────────────────────────────────── */
+
+.sms-modal-close {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border: none;
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: var(--text-muted, #64748b);
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.sms-modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.sms-modal-close:active {
+  transform: scale(0.94);
+}
+
+
+/* ─────────────────────────────────────────────
+   BODY
+───────────────────────────────────────────── */
+
+.sms-modal-body {
+  flex: 1;
+
+  padding: 24px;
+
+  overflow-y: auto;
+
+  overscroll-behavior: contain;
+}
+
+
+/* ─────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────── */
+
+.sms-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+
+  padding: 16px 22px;
+
+  border-top: 1px solid
+    var(--border, #e5e7eb);
+
+  background: #fafafa;
+}
+
+
+/* ─────────────────────────────────────────────
+   MOBILE
+───────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+
+  .sms-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .sms-modal {
+    max-width: none;
+
+    max-height: 90vh;
+
+    border-radius:
+      20px 20px 0 0;
+  }
+
+  .sms-modal-header {
+    min-height: 62px;
+    padding: 0 18px;
+  }
+
+  .sms-modal-body {
+    padding: 20px 18px;
+  }
+
+  .sms-modal-footer {
+    padding: 14px 18px;
+  }
+
+}
+>>>>>>> a665f935 (Update school management frontend)
 .hero {
   position: relative;
 

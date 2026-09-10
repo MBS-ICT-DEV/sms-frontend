@@ -41,6 +41,10 @@ export const teacherAPI = {
         return progress;
       },
     }),
+<<<<<<< HEAD
+=======
+    inputResult: (data) => apiClient.post('/results/input', data),
+>>>>>>> a665f935 (Update school management frontend)
 
   uploadResultsNew: (data) =>
     apiClient.post('/teacher/upload-results', data),

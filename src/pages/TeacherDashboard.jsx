@@ -2,7 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from '../layouts/MainLayout';
 import { Upload, ClipboardList, CheckSquare, LayoutDashboard, ArrowRight, BookOpen } from 'lucide-react';
+<<<<<<< HEAD
 
+=======
+import adminAPI from '../api/admin.api';
+import teacherAPI from '../api/teacher.api';
+import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+>>>>>>> a665f935 (Update school management frontend)
 const ActionCard = ({ title, desc, Icon, color, bg, btnLabel, onClick }) => (
   <button
     onClick={onClick}
@@ -20,6 +27,54 @@ const ActionCard = ({ title, desc, Icon, color, bg, btnLabel, onClick }) => (
 );
 
 export default function TeacherDashboard() {
+<<<<<<< HEAD
+=======
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [assignedClasses, setAssignedClasses] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const selectedClassName = assignedClasses.find((cls) => cls._id === selectedClassId)?.name || assignedClasses.find((cls) => cls._id === selectedClassId)?.className || 'Selected class';
+
+  useEffect(() => {
+    const fetchAssignedClasses = async () => {
+      try {
+        const { data } = await teacherAPI.getAssignedClasses();
+        const classes = data?.classes || data || [];
+        setAssignedClasses(classes);
+
+        if (classes.length > 0) {
+          setSelectedClassId((current) => current || classes[0]._id);
+        }
+      } catch (error) {
+        console.error('Failed to load assigned classes', error);
+      }
+    };
+
+    fetchAssignedClasses();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!selectedClassId) return;
+
+      try {
+        const { data } = await adminAPI.getStaffStats({ classId: selectedClassId });
+        setStats(data?.stats || {});
+      } catch (error) {
+        console.error('Failed to load stats', error);
+
+        toast.error(
+          error?.response?.data?.message || 'Failed to load stats'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedClassId]);
+
+>>>>>>> a665f935 (Update school management frontend)
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -70,11 +125,41 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
             { label: 'My Classes',   value: '—', color: 'text-blue-600',   bg: 'bg-blue-50',   Icon: BookOpen },
             { label: 'Assignments',  value: '—', color: 'text-purple-600', bg: 'bg-purple-50', Icon: ClipboardList },
+=======
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <label htmlFor="class-select" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+            Select class
+          </label>
+          <select
+            id="class-select"
+            value={selectedClassId}
+            onChange={(e) => setSelectedClassId(e.target.value)}
+            className="w-full md:w-72 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          >
+            {assignedClasses.length === 0 ? (
+              <option value="">No classes assigned</option>
+            ) : (
+              assignedClasses.map((cls) => (
+                <option key={cls._id} value={cls._id}>
+                  {cls.name || cls.className}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[
+            { label: 'Student No', value: loading ? '...' : stats?.StudentCount ?? 0, color: 'text-blue-600', bg: 'bg-blue-50', Icon: BookOpen },
+            { label: 'Assignments', value: '—', color: 'text-purple-600', bg: 'bg-purple-50', Icon: ClipboardList },
+>>>>>>> a665f935 (Update school management frontend)
             { label: 'Pending Results', value: '—', color: 'text-orange-600', bg: 'bg-orange-50', Icon: Upload },
           ].map(({ label, value, color, bg, Icon }) => (
             <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
@@ -84,6 +169,12 @@ export default function TeacherDashboard() {
               <div>
                 <p className="text-xs text-gray-500 font-medium">{label}</p>
                 <p className={`text-xl font-bold ${color}`}>{value}</p>
+<<<<<<< HEAD
+=======
+                {label === 'Student No' && (
+                  <p className="text-[11px] text-gray-500 mt-1">{selectedClassName}</p>
+                )}
+>>>>>>> a665f935 (Update school management frontend)
               </div>
             </div>
           ))}
