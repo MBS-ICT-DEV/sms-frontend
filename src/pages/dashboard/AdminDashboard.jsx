@@ -46,11 +46,12 @@ const inputCls = "w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [modal, setModal] = useState(null);
+  const [totalStudent, setTotalStudent] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-
+  
   const [teacherForm, setTeacherForm] = useState({ fullname: '', email: '', password: '', subject: '', phone: '' });
   const [principalForm, setPrincipalForm] = useState({ fullname: '', email: '', password: '', schoolName: '', phone: '' });
   const [classForm, setClassForm] = useState({ name: '', capacity: '' });
@@ -60,10 +61,12 @@ export default function AdminDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [teachersRes, classesRes] = await Promise.all([
+      const [totalStudentRes,teachersRes, classesRes] = await Promise.all([
+        adminAPI.getAllStudents(),
         adminAPI.getAllTeachers(),
         adminAPI.getClasses(),
       ]);
+      setTotalStudent(totalStudentRes.data.students || []);
       setTeachers(teachersRes.data.teachers || []);
       setClasses(classesRes.data.classes || []);
     } catch {
@@ -146,7 +149,7 @@ export default function AdminDashboard() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard Icon={Users}       title="Total Students"  value={loading ? '—' : '—'}             color="text-blue-600"   bg="bg-blue-50" />
+          <StatCard Icon={Users}       title="Total Students"  value={loading ? '—' : totalStudent.length}             color="text-blue-600"   bg="bg-blue-50" />
           <StatCard Icon={GraduationCap} title="Teachers"      value={loading ? '—' : teachers.length} color="text-emerald-600" bg="bg-emerald-50" />
           <StatCard Icon={BookOpen}    title="Classes"         value={loading ? '—' : classes.length}  color="text-purple-600" bg="bg-purple-50" />
           <StatCard Icon={TrendingUp}  title="Avg Score"       value="78%"                             color="text-orange-600" bg="bg-orange-50" />

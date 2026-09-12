@@ -22,7 +22,10 @@ import {
   User,
   School,
   ClipboardCheck,
+  Megaphone,
   History,
+  ArrowRightLeft,
+  CalendarCheck,
 } from 'lucide-react';
 
 /* =========================================================
@@ -59,11 +62,15 @@ const NAV = {
       href: '/admin/classes',
       Icon: BookOpen,
     },
+    { label: 'Students', href: '/admin/students', Icon: Users },
+    { label: 'Teachers', href: '/admin/teachers', Icon: UserCog },
+    { label: 'Academic Structure', href: '/admin/academic-management', Icon: School },
     {
       label: 'School Fees',
       href: '/admin/fees',
       Icon: CreditCard,
     },
+    { label: 'Announcements', href: '/announcements', Icon: Megaphone },
   ],
 
   hoa: [
@@ -82,6 +89,12 @@ const NAV = {
       href: '/hoa/classes',
       Icon: BookOpen,
     },
+    {
+      label: 'Student Migration',
+      href: '/hoa/migration',
+      Icon: ArrowRightLeft,
+    },
+    { label: 'Announcements', href: '/announcements', Icon: Megaphone },
     {
       label: 'Faculty',
       href: '/hoa/teachers',
@@ -107,6 +120,11 @@ const NAV = {
       href: '/hoa/fees',
       Icon: CreditCard,
     },
+    {
+      label: 'Set Terms',
+      href:'/hoa/active-terms',
+      Icon:CalendarCheck
+    }
   ],
 
   secretary: [
@@ -133,16 +151,15 @@ const NAV = {
       href: '/principal/students',
       Icon: Users,
     },
+    { label: 'Teachers', href: '/principal/teachers', Icon: UserCog },
+    { label: 'Classes', href: '/principal/classes', Icon: BookOpen },
+    { label: 'Announcements', href: '/announcements', Icon: Megaphone },
     {
       label: 'School Fees',
       href: '/principal/fees',
       Icon: CreditCard,
     },
-    {
-      label: 'Results Approval',
-      href: '/principal/results-approval',
-      Icon: ClipboardCheck,
-    },
+  
     {
       label: 'Academic Reports',
       href: '/principal/broadsheet',
@@ -176,6 +193,7 @@ const NAV = {
       href: '/teacher/attendance',
       Icon: ClipboardCheck,
     },
+    { label: 'My Profile', href: '/profile', Icon: User },
     {
       label: 'Fee Status',
       href: '/teacher/fees',
@@ -600,7 +618,10 @@ function SidebarContent({
         >
           {/* Avatar */}
 
-          <div
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            aria-label="Open my profile"
             className={`
               w-9
               h-9
@@ -619,7 +640,7 @@ function SidebarContent({
             `}
           >
             {initials || <User size={16} />}
-          </div>
+          </button>
 
           {/* User info */}
 
@@ -1021,7 +1042,10 @@ export default function MainLayout({ children }) {
 
           {/* Top avatar */}
 
-          <div
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            aria-label="Open my profile"
             className={`
               w-9
               h-9
@@ -1034,10 +1058,12 @@ export default function MainLayout({ children }) {
               font-bold
               text-sm
               shadow
+              border-0
+              cursor-pointer
             `}
           >
             {initials || <User size={16} />}
-          </div>
+          </button>
         </header>
 
         {/* =================================================

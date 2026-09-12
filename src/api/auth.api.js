@@ -8,6 +8,8 @@ export const authAPI = {
   loginHOA:       (credentials) => apiClient.post('/auth/hoa/login',       credentials),
   loginTeacher:   (credentials) => apiClient.post('/auth/teacher/login',   credentials),
   loginStudent:   (credentials) => apiClient.post('/auth/student/login',   credentials),
+  unifiedLogin:   (credentials) => apiClient.post('/auth/login',           credentials),
+  getProfile: () => apiClient.get('/auth/profile'),
 };
 
 export default authAPI;

@@ -429,24 +429,16 @@ function AcademicManagementPage() {
     };
 
     /*
-     * Senior Secondary requires department.
+     * Senior Secondary: department optional.
+     * Empty/null means ALL departments.
      */
-    if (
-      getSectionKey(selectedSection) === "ss"
-    ) {
-      if (!subjectForm.departmentId) {
-        toast.error(
-          "Senior Secondary subjects require a department"
-        );
-        return;
+    if (getSectionKey(selectedSection) === "ss") {
+      if (subjectForm.departmentId) {
+        payload.departmentId = subjectForm.departmentId;
+      } else {
+        payload.departmentId = null;
       }
-
-      payload.departmentId =
-        subjectForm.departmentId;
     } else {
-      /*
-       * Primary and JSS do not use departments.
-       */
       payload.departmentId = null;
     }
 
@@ -1499,7 +1491,7 @@ function AcademicManagementPage() {
                   className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
                 >
                   <option value="">
-                    Select department
+                    All Departments
                   </option>
 
                   {sectionDepartments.map(

@@ -19,7 +19,7 @@ export const teacherAPI = {
     apiClient.get('/teacher/my-classes'),
 
   getStudentsInClass: (classId) =>
-    apiClient.get(`/classes/${classId}/students`),
+    apiClient.get(`/teacher/classes/${classId}/students`),
 
   getClassStudents: (classId) =>
     apiClient.get(`/results/class-students/${classId}`),

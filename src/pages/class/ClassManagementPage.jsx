@@ -26,7 +26,8 @@ import {
 
 import MainLayout from '../../layouts/MainLayout';
 import adminAPI from '../../api/admin.api';
-
+import teacherAPI from '../../api/teacher.api'
+import principalAPI from '../../api/principal.api';
 export const ClassManagementPage = () => {
   // --------------------------------------------------
   // STATE
@@ -35,7 +36,7 @@ export const ClassManagementPage = () => {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [teachers, setTeachers] = useState([]);
-
+  const [teachersLoading, setTeachersLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,7 +44,7 @@ export const ClassManagementPage = () => {
   const [search, setSearch] = useState('');
 
   const [selectedClass, setSelectedClass] = useState(null);
-  const [selectedTeacher, setSelectedTeacher] = useState('');
+  const [selectedTeacher, setSelectedTeacher] = useState("");
 
   const [form, setForm] = useState({
     name: '',
@@ -52,6 +53,12 @@ export const ClassManagementPage = () => {
     section: '',
     subjects: '',
   });
+
+  const [sectionFilter, setSectionFilter] = useState('all');
+
+  const [sectionAssignModal, setSectionAssignModal] = useState(null);
+
+  const [sectionAssignMap, setSectionAssignMap] = useState({});
 
   // --------------------------------------------------
   // LOAD DATA
@@ -69,7 +76,8 @@ export const ClassManagementPage = () => {
         await Promise.all([
           adminAPI.getClasses(),
           adminAPI.getSections(),
-          adminAPI.getAllTeachers(),
+          // adminAPI.getAllTeachers(),
+          teacherAPI.getAssignedClasses()
         ]);
 
       setClasses(classesRes?.data?.classes || []);
@@ -101,15 +109,56 @@ export const ClassManagementPage = () => {
     });
   };
 
-  // --------------------------------------------------
-  // CLOSE MODAL
-  // --------------------------------------------------
-
   const closeModal = () => {
     setModal(null);
     setSelectedClass(null);
     setSelectedTeacher('');
     resetForm();
+    setSectionAssignModal(null);
+  };
+
+  // --------------------------------------------------
+  // SECTION ASSIGNMENT
+  // --------------------------------------------------
+
+  const openAssignSectionModal = (cls) => {
+    setSectionAssignModal(cls._id);
+    setSectionAssignMap((prev) => ({
+      ...prev,
+      [cls._id]: cls.section?._id || cls.section || '',
+    }));
+  };
+
+  const handleAssignSection = async (classId) => {
+    const newSectionId = sectionAssignMap[classId];
+
+    if (!newSectionId) {
+      toast.error('Please select a section');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      await adminAPI.updateClassSection(classId, {
+        sectionId: newSectionId,
+      });
+
+      toast.success('Section updated successfully');
+
+      setSectionAssignModal(null);
+
+      await loadData();
+    } catch (error) {
+      console.error('Assign section error:', error);
+
+      toast.error(
+        error.response?.data?.message ||
+          'Failed to assign section'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // --------------------------------------------------
@@ -362,76 +411,142 @@ export const ClassManagementPage = () => {
     setModal('assign-teacher');
   };
 
-  // --------------------------------------------------
-  // ASSIGN TEACHER
-  // --------------------------------------------------
 
-  const handleAssignTeacher = async () => {
-    if (!selectedClass?._id) {
-      toast.error('No class selected');
-      return;
-    }
+  // Get all teacher to select a class and make a post request that put  to handleassign teacher
+// --------------------------------------------------
+// FETCH TEACHERS
+// --------------------------------------------------
 
-    if (!selectedTeacher) {
-      toast.error('Please select a teacher');
-      return;
-    }
+const fetchTeachers = async () => {
+  try {
+    setTeachersLoading(true);
 
-    try {
-      setSubmitting(true);
+    const response = await adminAPI.getAllTeachers();
 
-      const response =
-        await adminAPI.assignTeacherToClass({
-          classId: selectedClass._id,
-          teacherId: selectedTeacher,
-        });
+    console.log("Teachers response:", response.data);
+        console.log("========== TEACHERS ==========");
+    console.log("Full response:", response);
+    console.log("Response data:", response.data);
+    console.log("Teachers:", response.data?.teachers);
 
-      const teacher = teachers.find(
-        (item) => item._id === selectedTeacher
-      );
+    const teacherList = Array.isArray(response.data?.teachers)
+      ? response.data.teachers
+      : [];
 
-      const assignedTeacher =
-        response?.data?.classTeacher ||
-        response?.data?.teacher ||
-        teacher;
+    setTeachers(teacherList);
 
-      setClasses((prev) =>
-        prev.map((cls) =>
-          cls._id === selectedClass._id
-            ? {
-                ...cls,
-                classTeacher: assignedTeacher,
-              }
-            : cls
-        )
-      );
+    // setTeachers(response.data?.teachers || []);
+  } catch (error) {
+    console.error("Fetch teachers error:", error);
 
-      toast.success(
-        response?.data?.message ||
-          'Teacher assigned successfully'
-      );
+    toast.error(
+      error.response?.data?.message ||
+        "Failed to fetch teachers"
+    );
 
-      closeModal();
-    } catch (error) {
-      console.error(
-        'Assign teacher error:',
-        error
-      );
+    setTeachers([]);
+  } finally {
+    setTeachersLoading(false);
 
-      toast.error(
-        error.response?.data?.message ||
-          'Failed to assign teacher'
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  }
+};
+useEffect(() => {
+  if (modal === "assign-teacher") {
+    fetchTeachers();
+  }
+}, [modal]);
 
+// --------------------------------------------------
+// FETCH CLASSES
+// --------------------------------------------------
+
+const fetchClasses = async () => {
+  try {
+    // const response = await adminAPI.getClasses();
+    const response = await principalAPI.getMyClasses();
+
+    console.log("Classes response:", response.data);
+
+    setClasses(response.data?.classes || []);
+  } catch (error) {
+    console.error("Fetch classes error:", error);
+
+    toast.error(
+      error.response?.data?.message ||
+        "Failed to fetch classes"
+    );
+
+    setClasses([]);
+  }
+};
+
+
+// --------------------------------------------------
+// ASSIGN TEACHER
+// --------------------------------------------------
+
+const handleAssignTeacher = async () => {
+  console.log("========== ASSIGN TEACHER ==========");
+  console.log("Selected class:", selectedClass);
+  console.log("Selected class ID:", selectedClass?._id);
+  console.log("Selected teacher:", selectedTeacher);
+  console.log("Teachers:", teachers);
+
+  if (!selectedClass?._id) {
+    toast.error("No class selected");
+    return;
+  }
+
+  if (!selectedTeacher) {
+    toast.error("Please select a teacher");
+    return;
+  }
+
+  try {
+    setSubmitting(true);
+
+    // PUT /api/admin/assign-teacher
+    const response = await adminAPI.assignTeacherToClass({
+      classId: selectedClass._id,
+      teacherId: selectedTeacher,
+    });
+
+    console.log("Assign teacher response:", response.data);
+
+    toast.success(
+      response.data?.message ||
+        "Teacher assigned successfully"
+    );
+
+    // Get the updated class and assigned teacher
+    // directly from the backend.
+    await fetchClasses();
+
+    closeModal();
+
+  } catch (error) {
+    console.error("Assign teacher error:", error);
+
+    toast.error(
+      error.response?.data?.message ||
+        "Failed to assign teacher"
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};  
   // --------------------------------------------------
   // SEARCH / FILTER
   // --------------------------------------------------
 
   const filtered = classes.filter((cls) => {
+    if (
+      sectionFilter !== 'all' &&
+      (cls.section?._id || cls.section) !== sectionFilter
+    ) {
+      return false;
+    }
+
     const name = (
       cls.name ||
       cls.className ||
@@ -451,9 +566,7 @@ export const ClassManagementPage = () => {
       ''
     ).toLowerCase();
 
-    const query = search
-      .toLowerCase()
-      .trim();
+    const query = search.toLowerCase().trim();
 
     return (
       name.includes(query) ||
@@ -759,6 +872,26 @@ export const ClassManagementPage = () => {
         </div>
 
         {/* ------------------------------------------
+            SECTION FILTER
+        ------------------------------------------ */}
+
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-slate-500">Filter by section:</span>
+          <select
+            value={sectionFilter}
+            onChange={(e) => setSectionFilter(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          >
+            <option value="all">All Sections</option>
+            {sections.map((section) => (
+              <option key={section._id} value={section._id}>
+                {section.name} ({section.code})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* ------------------------------------------
             CLASSES
         ------------------------------------------ */}
 
@@ -1017,6 +1150,51 @@ export const ClassManagementPage = () => {
 
                       </div>
 
+                      {/* DEPARTMENT */}
+
+                      <div className="
+                        p-3
+                        rounded-xl
+                        border border-slate-100
+                        bg-white
+                      ">
+
+                        <div className="
+                          flex
+                          items-center
+                          gap-2
+                        ">
+                          <GraduationCap
+                            size={15}
+                            className="text-amber-500"
+                          />
+
+                          <span className="
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-wide
+                            text-slate-400
+                          ">
+                            Department
+                          </span>
+                        </div>
+
+                        <p className="
+                          mt-2
+                          text-sm
+                          font-bold
+                          text-slate-800
+                        ">
+                          {cls.section?.code === 'SS' && cls.department
+                            ? cls.department?.name || cls.department
+                            : cls.section?.code === 'SS'
+                              ? 'None'
+                              : 'N/A'}
+                        </p>
+
+                      </div>
+
                       {/* SUBJECTS */}
 
                       <div className="
@@ -1150,9 +1328,7 @@ export const ClassManagementPage = () => {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        openAssignTeacherModal(cls)
-                      }
+                      onClick={() => openAssignTeacherModal(cls)}
                       className="
                         flex-1
                         h-9
@@ -1171,6 +1347,31 @@ export const ClassManagementPage = () => {
                     >
                       <UserPlus size={14} />
                       Assign
+                    </button>
+
+                    {/* ASSIGN SECTION */}
+
+                    <button
+                      type="button"
+                      onClick={() => openAssignSectionModal(cls)}
+                      className="
+                        flex-1
+                        h-9
+                        rounded-lg
+                        bg-amber-500
+                        text-white
+                        text-xs
+                        font-semibold
+                        flex
+                        items-center
+                        justify-center
+                        gap-1.5
+                        hover:bg-amber-600
+                        transition
+                      "
+                    >
+                      <Layers3 size={14} />
+                      Section
                     </button>
 
                     {/* EDIT */}
@@ -1656,6 +1857,7 @@ export const ClassManagementPage = () => {
                   e.target.value
                 )
               }
+              disabled={teachersLoading}
               className="
                 w-full
                 h-11
@@ -1676,7 +1878,7 @@ export const ClassManagementPage = () => {
             >
 
               <option value="">
-                Select a teacher
+                {teachersLoading ? "Loading Teacher...": teachers.length === 0 ? "No teacher found" : "Select a teacher"}
               </option>
 
               {teachers.map((teacher) => (
@@ -1753,8 +1955,182 @@ export const ClassManagementPage = () => {
 
           </div>
 
-        </div>
-      </Modal>
+          </div>
+        </Modal>
+
+        {/* ==================================================
+            ASSIGN SECTION MODAL
+        ================================================== */}
+
+        <Modal
+          isOpen={!!sectionAssignModal}
+          onClose={() => setSectionAssignModal(null)}
+          title="Assign Class to Section"
+        >
+          <div className="space-y-5">
+
+            {/* INTRO */}
+
+            <div className="
+              flex
+              items-center
+              gap-3
+              p-4
+              rounded-xl
+              bg-amber-50
+              border
+              border-amber-100
+            ">
+
+              <div className="
+                w-10
+                h-10
+                rounded-xl
+                bg-white
+                text-amber-600
+                flex
+                items-center
+                justify-center
+              ">
+                <Layers3 size={19} />
+              </div>
+
+              <div>
+                <p className="
+                  text-sm
+                  font-bold
+                  text-amber-900
+                ">
+                  Change class section
+                </p>
+
+                <p className="
+                  text-xs
+                  text-amber-600
+                  mt-0.5
+                ">
+                  Select the new section for this class.
+                </p>
+              </div>
+
+            </div>
+
+            {/* SECTION SELECT */}
+
+            <div>
+              <label className="
+                block
+                text-xs
+                font-semibold
+                text-slate-600
+                mb-1.5
+              ">
+                Select Section
+              </label>
+
+              <select
+                value={sectionAssignMap[sectionAssignModal] || ''}
+                onChange={(e) =>
+                  setSectionAssignMap((prev) => ({
+                    ...prev,
+                    [sectionAssignModal]: e.target.value,
+                  }))
+                }
+                className="
+                  w-full
+                  h-11
+                  px-3.5
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-50
+                  text-sm
+                  text-slate-700
+                  outline-none
+                  transition
+                  focus:bg-white
+                  focus:border-blue-500
+                  focus:ring-4
+                  focus:ring-blue-50
+                "
+              >
+                <option value="">Select a section</option>
+
+                {sections.map((section) => (
+                  <option
+                    key={section._id}
+                    value={section._id}
+                  >
+                    {section.name} ({section.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* ACTIONS */}
+
+            <div className="
+              flex
+              gap-3
+              pt-2
+            ">
+
+              <button
+                type="button"
+                onClick={() => setSectionAssignModal(null)}
+                disabled={submitting}
+                className="
+                  flex-1
+                  h-11
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  text-sm
+                  font-semibold
+                  text-slate-600
+                  hover:bg-slate-50
+                  transition
+                  disabled:opacity-50
+                "
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleAssignSection(sectionAssignModal)}
+                disabled={submitting}
+                className="
+                  flex-1
+                  h-11
+                  rounded-xl
+                  bg-amber-500
+                  text-white
+                  text-sm
+                  font-semibold
+                  flex
+                  items-center
+                  justify-center
+                  gap-2
+                  hover:bg-amber-600
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
+                "
+              >
+                {submitting ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <Layers3 size={16} />
+                )}
+
+                Assign Section
+              </button>
+
+            </div>
+
+          </div>
+        </Modal>
 
     </MainLayout>
   );

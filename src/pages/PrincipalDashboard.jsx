@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
-  Users, GraduationCap, BookOpen, ClipboardList,
+  Users, GraduationCap, BookOpen,
   Plus, UserPlus, X, Loader2, Edit2, UserCheck,
 } from 'lucide-react';
 import MainLayout from '../layouts/MainLayout';
 import principalAPI from '../api/principal.api';
-import adminAPI from '../api/admin.api';
 
 const StatCard = ({ Icon, title, value, color, bg }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
@@ -48,33 +47,35 @@ const Field = ({ label, children }) => (
 const inputCls = "w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white";
 
 export default function PrincipalDashboard() {
-  const navigate = useNavigate();
   const [modal, setModal] = useState(null);
   const [students, setStudents] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [assignTeacher, setAssignTeacher] = useState([]);
 
   const [studentForm, setStudentForm] = useState({ fullname: '', email: '', gender: '', classId: '' });
   const [editForm, setEditForm] = useState({ fullname: '', gender: '' });
   const [assignForm, setAssignForm] = useState({ classId: '', teacherId: '' });
-  const [classForm, setClassForm] = useState({ name: '', capacity: '' });
+  const [classForm, setClassForm] = useState({ name: '', capacity: '', sectionId: '' });
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [sRes, cRes, tRes] = await Promise.all([
-        principalAPI.getStudents(),
-        principalAPI.getClasses(),
-        principalAPI.getTeachers(),
+      const [classesRes, studentsRes, teachersRes] = await Promise.all([
+        principalAPI.getMyClasses(),
+        principalAPI.getMyStudents(),
+        principalAPI.getSecondaryTeachers(),
       ]);
-      setStudents(sRes.data.students || []);
-      setClasses(cRes.data.classes || []);
-      setTeachers(tRes.data.teachers || []);
+      setStudents(studentsRes.data.students || []);
+      setClasses(classesRes.data.classes || []);
+      setSections(classesRes.data.sections || []);
+      setTeachers(teachersRes.data.teachers || []);
     } catch { toast.error('Failed to load data'); }
     finally { setLoading(false); }
   };
@@ -85,7 +86,7 @@ export default function PrincipalDashboard() {
     setStudentForm({ fullname: '', email: '', gender: '', classId: '' });
     setEditForm({ fullname: '', gender: '' });
     setAssignForm({ classId: '', teacherId: '' });
-    setClassForm({ name: '', capacity: '' });
+    setClassForm({ name: '', capacity: '', sectionId: '' });
   };
 
   const handleCreateStudent = async (e) => {
@@ -95,11 +96,17 @@ export default function PrincipalDashboard() {
     if (!studentForm.classId) return toast.error('Please select a class');
     try {
       setSubmitting(true);
-      const res = await principalAPI.createStudent({ ...studentForm, fullname: studentForm.fullname.trim(), email: studentForm.email.trim() });
+      const selectedClass = classes.find(c => c._id === studentForm.classId);
+      const res = await principalAPI.createStudent({
+        ...studentForm,
+        fullname: studentForm.fullname.trim(),
+        email: studentForm.email.trim(),
+        sectionId: selectedClass?.section?._id || '',
+      });
       toast.success(res.data.message || 'Student created');
       setStudents(p => [res.data.student, ...p]);
       closeModal();
-    } catch (err) { if (!err.response) toast.error('Failed to create student'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to create student'); }
     finally { setSubmitting(false); }
   };
 
@@ -121,7 +128,7 @@ export default function PrincipalDashboard() {
     if (!assignForm.classId || !assignForm.teacherId) return toast.error('Select both class and teacher');
     try {
       setSubmitting(true);
-      await principalAPI.assignTeacherToClass({ classId: assignForm.classId, teacherId: assignForm.teacherId });
+      await principalAPI.assignTeacherToSecondaryClass({ classId: assignForm.classId, teacherId: assignForm.teacherId });
       toast.success('Teacher assigned');
       await loadData();
       closeModal();
@@ -131,14 +138,20 @@ export default function PrincipalDashboard() {
 
   const handleCreateClass = async (e) => {
     e.preventDefault();
-    if (!classForm.name.trim()) return toast.error('Class name is required');
-    try {
+      const className = classForm.name.trim();
+      if (!className) return toast.error('Class name is required');
+      if (!/^(JSS|SS)\s*[1-3]$/i.test(className)) {
+        return toast.error('Select a class from JSS 1-3 or SS 1-3');
+      }
+      if (!classForm.sectionId) return toast.error('Please select a section');
+      try {
+
       setSubmitting(true);
-      const res = await adminAPI.createClass({ name: classForm.name.trim(), capacity: parseInt(classForm.capacity) || 30 });
+      const res = await principalAPI.createSecondaryClass({ name: className, capacity: parseInt(classForm.capacity) || 30, sectionId: classForm.sectionId });
       toast.success(res.data.message || 'Class created');
       setClasses(p => [res.data.class, ...p]);
       closeModal();
-    } catch (err) { if (!err.response) toast.error('Failed'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setSubmitting(false); }
   };
 
@@ -152,7 +165,7 @@ export default function PrincipalDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Principal Dashboard</h1>
-            <p className="text-gray-500 text-sm mt-1">Manage students, teachers and classes</p>
+            <p className="text-gray-500 text-sm mt-1">Secondary school only: JSS 1-3 and SS 1-3</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setModal('student')}
@@ -167,19 +180,15 @@ export default function PrincipalDashboard() {
               className="flex items-center gap-2 px-3.5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition shadow-sm">
               <Plus size={15} /> New Class
             </button>
-            <button onClick={() => navigate('/principal/results-approval')}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition shadow-sm">
-              <ClipboardList size={15} /> Approve Results
-            </button>
+         
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard Icon={Users}         title="Students"        value={loading ? '—' : students.length} color="text-blue-600"   bg="bg-blue-50" />
-          <StatCard Icon={GraduationCap} title="Teachers"        value={loading ? '—' : teachers.length} color="text-emerald-600" bg="bg-emerald-50" />
-          <StatCard Icon={BookOpen}      title="Classes"         value={loading ? '—' : classes.length}  color="text-purple-600" bg="bg-purple-50" />
-          <StatCard Icon={ClipboardList} title="Pending Results" value="—"                               color="text-orange-600" bg="bg-orange-50" />
+          <StatCard Icon={Users}         title="Secondary Students" value={loading ? '—' : students.length} color="text-blue-600"   bg="bg-blue-50" />
+          <StatCard Icon={GraduationCap} title="Secondary Teachers" value={loading ? '—' : teachers.length} color="text-emerald-600" bg="bg-emerald-50" />
+          <StatCard Icon={BookOpen}      title="Secondary Classes"  value={loading ? '—' : classes.length}  color="text-purple-600" bg="bg-purple-50" />
         </div>
 
         {/* Main grid */}
@@ -279,9 +288,10 @@ export default function PrincipalDashboard() {
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{c.name}</p>
                       <p className="text-xs text-gray-400">{c.classTeacher?.fullname || 'No teacher'}</p>
+                      <p className="text-xs text-gray-400">{c.section?.name || ''}{c.section?.code ? ` (${c.section.code})` : ''}</p>
                     </div>
                     <span className="text-xs px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full font-semibold">
-                      {c.students?.length || 0} students
+                      {c.studentCount ?? c.students?.length ?? 0} students
                     </span>
                   </div>
                 ))}
@@ -358,8 +368,14 @@ export default function PrincipalDashboard() {
 
       <Modal isOpen={modal === 'class'} onClose={closeModal} title="Create New Class">
         <form onSubmit={handleCreateClass}>
-          <Field label="Class Name *"><input className={inputCls} placeholder="e.g. JSS 1 or Form 2A" value={classForm.name} onChange={e => setClassForm(p => ({ ...p, name: e.target.value }))} /></Field>
+          <Field label="Class Name *"><input className={inputCls} placeholder="e.g. JSS 1 or SS 3" value={classForm.name} onChange={e => setClassForm(p => ({ ...p, name: e.target.value }))} /></Field>
           <Field label="Capacity"><input className={inputCls} type="number" placeholder="e.g. 30" value={classForm.capacity} onChange={e => setClassForm(p => ({ ...p, capacity: e.target.value }))} /></Field>
+          <Field label="Section *">
+            <select className={inputCls} value={classForm.sectionId} onChange={e => setClassForm(p => ({ ...p, sectionId: e.target.value }))}>
+              <option value="">Select secondary section</option>
+              {sections.map(section => <option key={section._id} value={section._id}>{section.name} ({section.code})</option>)}
+            </select>
+          </Field>
           <div className="flex gap-3 mt-2">
             <button type="button" onClick={closeModal} className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">Cancel</button>
             <button type="submit" disabled={submitting} className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2">

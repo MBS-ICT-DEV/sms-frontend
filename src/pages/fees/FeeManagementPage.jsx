@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import {
   Plus, X, ChevronRight, Users, DollarSign,
-  CheckCircle, AlertCircle, Clock, Loader2, CalendarDays, Receipt,
+  CheckCircle, AlertCircle, Clock, Loader2, CalendarDays, Receipt, Trash2,
 } from 'lucide-react';
 import feeAPI from '../../api/fee.api';
 import { adminAPI } from '../../api/admin.api';
+import { useAuth } from '../../context/AuthContext';
 import ReceiptModal from '../../components/ReceiptModal';
+import { TermApi } from '../../api/term.api';
 
 const inputCls = "w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
 
@@ -182,6 +184,7 @@ function PaidStudentsView() {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function FeeManagementPage() {
+  const { isPrincipal } = useAuth();
   const [tab,      setTab]      = useState('fees'); // 'fees' | 'paid'
   const [fees,     setFees]     = useState([]);
   const [classes,  setClasses]  = useState([]);
@@ -192,16 +195,20 @@ export default function FeeManagementPage() {
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [summary,         setSummary]         = useState(null);
   const [submitting,      setSubmitting]      = useState(false);
-
+  const [deletingFeeId, setDeletingFeeId] = useState(null);
+  const [deleteFee, setDeleteFee] = useState([]);
+  const [Terms, setTerms] = useState([]);
+  const [loadingTerms, setLoadingTerms] =
+      useState(false);
+        const [activeTerm, setActiveTerm] = useState(null);
+      
+        const [selectedTermId, setSelectedTermId] = useState("");
   const [form, setForm] = useState({
-    title: '', classId: '', term: 'First Term', session: '', amount: '', dueDate: '',
+    title: '', classId: '', term: "", session: '', amount: '', dueDate: '',
     paymentOptions: { fullPayment: true, installment: false, customAmount: false },
   });
-
-  useEffect(() => {
-    loadFees();
-    loadClasses();
-  }, []);
+ const [studentForm, setStudentForm] = useState({  classId: '' });
+ 
 
   const loadFees = async () => {
     try {
@@ -214,7 +221,57 @@ export default function FeeManagementPage() {
       setLoading(false);
     }
   };
+const loadTerms = async () => {
+    try {
+      setLoadingTerms(true);
 
+      const results = await Promise.allSettled([
+        TermApi.getAllTerms(),
+        TermApi.getCurrentTerm(),
+      ]);
+
+      if (results[0].status === "fulfilled") {
+        setTerms(results[0].value?.data?.terms || []);
+      } else {
+        throw results[0].reason || new Error("Failed to fetch terms");
+      }
+
+      if (results[1].status === "fulfilled") {
+        const currentTerm = results[1].value?.data?.term || null;
+        setActiveTerm(currentTerm);
+
+        if (currentTerm) {
+          setForm((prev) => ({
+            ...prev,
+            term: currentTerm.term || "",
+            session: currentTerm.session || "",
+          }));
+        }
+      } else if (results[1].reason?.response?.status === 404) {
+        setActiveTerm(null);
+      } else {
+        throw results[1].reason;
+      }
+    } catch (error) {
+      console.error("Failed to load terms:", error);
+      if (error?.response?.status === 404) {
+        setActiveTerm(null);
+      } else {
+        toast.error(
+          error?.response?.data?.message ||
+            "Failed to load academic terms"
+        );
+      }
+    } finally {
+      setLoadingTerms(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFees();
+    loadClasses();
+    loadTerms()
+  }, []);
   const loadClasses = async () => {
     try {
       const { data } = await adminAPI.getClasses();
@@ -224,19 +281,52 @@ export default function FeeManagementPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim())                       return toast.error('Fee title is required');
-    if (!form.classId)                            return toast.error('Select a class');
-    if (!form.amount || Number(form.amount) <= 0) return toast.error('Enter a valid amount');
+
+    if (!form.title.trim()) return toast.error("Fee title is required");
+    if (!form.classId) return toast.error("Select a class");
+
+    if (!activeTerm) {
+      return toast.error(
+        "There is no active academic term. Activate a term first."
+      );
+    }
+
+    if (!form.amount || Number(form.amount) <= 0) {
+      return toast.error("Enter a valid amount");
+    }
 
     setSubmitting(true);
+    // setStudentForm(true);
     try {
-      const { data } = await feeAPI.createFee(form);
-      toast.success(data.message || 'Fee created successfully');
+      const payload = {
+        ...form,
+        term: activeTerm.term,
+        session: activeTerm.session,
+      };
+
+      const { data } = await feeAPI.createFee(payload);
+
+      toast.success(data.message || "Fee created successfully");
       setFees((prev) => [data.fee, ...prev]);
       setAddModal(false);
-      setForm({ title: '', classId: '', term: 'First Term', session: '', amount: '', dueDate: '', paymentOptions: { fullPayment: true, installment: false, customAmount: false } });
+
+      setForm({
+        title: "",
+        classId: "",
+        term: activeTerm.term || "",
+        session: activeTerm.session || "",
+        amount: "",
+        dueDate: "",
+        paymentOptions: {
+          fullPayment: true,
+          installment: false,
+          customAmount: false,
+        },
+      });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create fee');
+      toast.error(
+        err.response?.data?.message || "Failed to create fee"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -258,6 +348,40 @@ export default function FeeManagementPage() {
     }
   };
 
+  const handleDeleteFee = async (fee) => {
+    if (!fee?._id) return;
+
+    const confirmed = window.confirm(
+      `Delete "${fee.title}" for ${fee.class?.name || "this class"}?\n\n` +
+        "The fee and its unpaid payment records will be deleted. " +
+        "A fee cannot be deleted once a payment has been made."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingFeeId(fee._id);
+
+      const { data } = await feeAPI.deleteFee(fee._id);
+
+      toast.success(data?.message || "Fee deleted successfully");
+      setFees((prev) => prev.filter((item) => item._id !== fee._id));
+
+      if (paymentModal?._id === fee._id) {
+        setPaymentModal(null);
+        setPayments([]);
+        setSummary(null);
+      }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to delete fee"
+      );
+    } finally {
+      setDeletingFeeId(null);
+    }
+  };
+
   const fmt = (n) => `₦${Number(n).toLocaleString()}`;
 
   return (
@@ -267,9 +391,17 @@ export default function FeeManagementPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Fee Management</h1>
-          <p className="text-gray-500 text-sm mt-1">Create fees and track student payments</p>
+          <p className="text-gray-500 text-sm mt-1">
+            Create fees and track student payments
+          </p>
+          {activeTerm && (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-green-50 border border-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Active Term: {activeTerm.term} · {activeTerm.session}
+            </div>
+          )}
         </div>
-        {tab === 'fees' && (
+        {tab === 'fees' && !isPrincipal && (
           <button
             onClick={() => setAddModal(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition shadow-sm"
@@ -335,6 +467,24 @@ export default function FeeManagementPage() {
                     {fee.paymentOptions?.installment ? 'Installment allowed' : 'Full / Custom'}
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteFee(fee);
+                  }}
+                  disabled={deletingFeeId === fee._id || isPrincipal}
+                  className="w-9 h-9 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  title={isPrincipal ? 'View only' : 'Delete fee'}
+                >
+                  {deletingFeeId === fee._id ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={15} />
+                  )}
+                </button>
+
                 <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-500 transition flex-shrink-0" />
               </div>
             ))}
@@ -346,7 +496,8 @@ export default function FeeManagementPage() {
       {tab === 'paid' && <PaidStudentsView />}
 
       {/* Add Fee Modal */}
-      <Modal isOpen={addModal} onClose={() => setAddModal(false)} title="Add New Fee">
+      {!isPrincipal && (
+        <Modal isOpen={addModal} onClose={() => setAddModal(false)} title="Add New Fee">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Fee Title *</label>
@@ -354,45 +505,86 @@ export default function FeeManagementPage() {
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Class *</label>
-              <select className={inputCls} value={form.classId}
-                onChange={(e) => setForm((p) => ({ ...p, classId: e.target.value }))}>
-                <option value="">Select class…</option>
-                {classes.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Term *</label>
-              <select className={inputCls} value={form.term}
-                onChange={(e) => setForm((p) => ({ ...p, term: e.target.value }))}>
-                <option>First Term</option>
-                <option>Second Term</option>
-                <option>Third Term</option>
-              </select>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Academic Term *
+              </label>
+
+              {loadingTerms ? (
+                <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                  <Loader2 size={15} className="animate-spin" />
+                  Loading active term...
+                </div>
+              ) : activeTerm ? (
+                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-green-800">
+                        {activeTerm.term}
+                      </p>
+                      <p className="text-xs text-green-700 mt-0.5">
+                        {activeTerm.session}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      ACTIVE
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-red-700">
+                    No active academic term
+                  </p>
+                  <p className="text-xs text-red-600 mt-0.5">
+                    Activate an academic term before creating a fee.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Amount (₦) *</label>
-              <input type="number" min="0" className={inputCls} placeholder="e.g. 50000" value={form.amount}
-                onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} />
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Amount (₦) *
+              </label>
+              <input
+                type="number"
+                min="0"
+                className={inputCls}
+                placeholder="e.g. 50000"
+                value={form.amount}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, amount: e.target.value }))
+                }
+              />
             </div>
+
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Session</label>
-              <input className={inputCls} placeholder="e.g. 2024/2025" value={form.session}
-                onChange={(e) => setForm((p) => ({ ...p, session: e.target.value }))} />
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Due Date
+              </label>
+              <input
+                type="date"
+                className={inputCls}
+                value={form.dueDate}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, dueDate: e.target.value }))
+                }
+              />
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Due Date</label>
-            <input type="date" className={inputCls} value={form.dueDate}
-              onChange={(e) => setForm((p) => ({ ...p, dueDate: e.target.value }))} />
-          </div>
-
+             <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Select Class</label>
+              <select className={inputCls} value={form.classId} onChange={e => setForm(p => ({ ...p, classId: e.target.value }))}>
+              <option value="">Select class</option>
+              {classes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
+             </div>
+             <input type="text"  className='' form />
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Options</label>
             <div className="space-y-2">
@@ -424,6 +616,7 @@ export default function FeeManagementPage() {
           </div>
         </form>
       </Modal>
+      )}
 
       {/* Payment Status Modal */}
       <Modal isOpen={!!paymentModal} onClose={() => setPaymentModal(null)}

@@ -1,6 +1,10 @@
 import apiClient from "./axios.js";
 
 export const adminAPI = {
+
+  // Test
+  //  geClasses: () => apiClient.get("/admin/principal-classes"),
+    // getMyPStudentByClass: () => apiClient.get("/admin/principal-student"),
   // ============================================================
   // ADMIN
   // ============================================================
@@ -28,8 +32,7 @@ export const adminAPI = {
   createTeacher: (data) =>
     apiClient.post("/admin/create-teacher", data),
 
-  getAllTeachers: () =>
-    apiClient.get("/admin/teachers"),
+  getAllTeachers: () => apiClient.get("/admin/teachers"),
 
   getTeachersResultStatus: (params) =>
     apiClient.get("/admin/teachers/results-status", {
@@ -62,6 +65,28 @@ export const adminAPI = {
       params,
     }),
 
+
+    // --------------------------------------------------
+// ACADEMIC TERMS
+// --------------------------------------------------
+
+createTerm: (data) =>
+  apiClient.post("/terms", data),
+
+getAllTerms: () =>
+  apiClient.get("/terms"),
+
+getCurrentTerm: () =>
+  apiClient.get("/terms/current"),
+
+activateTerm: (id) =>
+  apiClient.put(`/terms/${id}/activate`),
+
+closeTerm: (id) =>
+  apiClient.put(`/terms/${id}/close`),
+
+submitTermResults: (id) =>
+  apiClient.put(`/terms/${id}/submit-results`),
   // ============================================================
   // CLASSES
   // ============================================================
@@ -129,7 +154,7 @@ export const adminAPI = {
     apiClient.get(`/admin/sections/${sectionId}/classes`),
 
   updateSection: (sectionId, data) =>
-    apiClient.patch(`/admin/sections/${sectionId}`, data),
+    apiClient.put(`/admin/sections/${sectionId}`, data),
 
   deleteSection: (sectionId) =>
     apiClient.delete(`/admin/sections/${sectionId}`),
@@ -144,6 +169,9 @@ export const adminAPI = {
 
   assignClassesToSection: (data) =>
     apiClient.post("/admin/classes/assign-section", data),
+
+  updateClassSection: (classId, data) =>
+    apiClient.put(`/admin/classes/${classId}/section`, data),
 
   // ============================================================
   // DEPARTMENTS
@@ -223,6 +251,12 @@ export const adminAPI = {
 
   getHoaStats: () =>
     apiClient.get("/admin/hoa/stats"),
+
+  previewMigration: (data) => apiClient.post("/migrations/preview", data),
+  confirmMigration: (data) => apiClient.post("/migrations/confirm", data),
+
+  getAnnouncements: () => apiClient.get("/announcements"),
+  createAnnouncement: (data) => apiClient.post("/announcements", data),
 
   getStaffStats: (params) =>
     apiClient.get("/admin/staff-stats", {
@@ -307,6 +341,9 @@ export const adminAPI = {
 
   resetSystem: () =>
     apiClient.delete("/admin/reset-system"),
+
+    resetStudentData: () =>
+    apiClient.delete("/admin/reset-studentData"),
 };
 
 export default adminAPI;

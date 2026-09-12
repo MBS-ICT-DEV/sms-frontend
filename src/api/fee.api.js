@@ -19,6 +19,7 @@ export const feeAPI = {
     if (method) params.method = method;
     return apiClient.get(`/fees/pay/verify/${reference}`, { params });
   },
+  deleteFee:(id) => apiClient.delete(`/fees/${id}`)
 };
 
 export default feeAPI;

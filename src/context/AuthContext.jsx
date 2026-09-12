@@ -109,6 +109,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginUnified = async (credentials) => {
+    try {
+      const { data } = await authAPI.unifiedLogin(credentials);
+      const userData = data.admin || data.principal || data.hoa || data.secretary || data.teacher || data.user;
+      saveSession(data.token, userData);
+      toast.success('Login successful!');
+      return userData;
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Login failed');
+      throw error;
+    }
+  };
+
   const loginStudent = async (credentials) => {
     try {
       const { data } = await authAPI.loginStudent(credentials);
@@ -148,6 +161,7 @@ export const AuthProvider = ({ children }) => {
         loginHOA,
         loginTeacher,
         loginStudent,
+        loginUnified,
         logout,
 
         isAuthenticated: !!user,

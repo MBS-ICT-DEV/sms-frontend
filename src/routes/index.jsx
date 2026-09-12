@@ -10,6 +10,8 @@ import { ProtectedRoute } from "./ProtectedRoute";
 import { useAuth } from "../context/AuthContext";
 import MainLayout from "../layouts/MainLayout";
 import AIAssistant from "../components/AIAssistant";
+import ProfilePage from "../pages/ProfilePage";
+import AnnouncementPage from "../pages/AnnouncementPage";
 
 // ============================================================
 // PUBLIC
@@ -44,7 +46,8 @@ import HoaStudentsPage from "../pages/hoa/HoaStudentsPage";
 import HoaAttendancePage from "../pages/hoa/HoaAttendancePage";
 import HoaAttendacHistory from "../pages/hoa/HoaAttendacHistory";
 import AcademicManagementPage from "../pages/hoa/AcademicManagementPage";
-
+import StudentMigrationPage from "../pages/hoa/StudentMigrationPage";
+import ActiveTerms from "../pages/hoa/ActiveTerms";
 // ============================================================
 // SECRETARY
 // ============================================================
@@ -167,6 +170,9 @@ export function AppRoutes() {
         }
       />
 
+      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+      <Route path="/announcements" element={<ProtectedRoute><AnnouncementPage /></ProtectedRoute>} />
+
       {/* ======================================================
           DEVELOPER
       ====================================================== */}
@@ -223,6 +229,9 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/admin/students" element={<ProtectedRoute requiredRole="admin"><StudentManagement /></ProtectedRoute>} />
+      <Route path="/admin/teachers" element={<ProtectedRoute requiredRole="admin"><MainLayout><HoaTeachersPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/admin/academic-management" element={<ProtectedRoute requiredRole="admin"><MainLayout><AcademicManagementPage /></MainLayout></ProtectedRoute>} />
 
       <Route
         path="/admin/fees"
@@ -267,6 +276,8 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/principal/teachers" element={<ProtectedRoute requiredRole="principal"><MainLayout><HoaTeachersPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/principal/classes" element={<ProtectedRoute requiredRole="principal"><ClassManagementPage /></ProtectedRoute>} />
 
       <Route
         path="/principal/results-approval"
@@ -477,6 +488,11 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/hoa/migration" element={<ProtectedRoute requiredRole="hoa"><StudentMigrationPage /></ProtectedRoute>} />
+      
+      <Route  path="/hoa/active-terms" element={<ProtectedRoute requiredRole="hoa">
+               <ActiveTerms />
+      </ProtectedRoute>} />
 
       <Route
         path="/hoa/teachers"

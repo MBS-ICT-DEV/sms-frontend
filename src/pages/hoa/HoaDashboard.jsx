@@ -5,6 +5,7 @@ import adminAPI from '../../api/admin.api';
 import {
   Users, UserCog, BookOpen, CreditCard, DollarSign,
   CheckSquare, UserX, TrendingUp, ArrowRight,
+  CalendarCheck,
 } from 'lucide-react';
 import AIAssistant from '../../components/AIAssistant';
 
@@ -89,6 +90,8 @@ export default function HoaDashboard() {
           <QuickLink href="/hoa/classes"    icon={BookOpen}   label="Manage Classes"    color="bg-teal-500" />
           <QuickLink href="/hoa/attendance" icon={CheckSquare}label="View Attendance"   color="bg-orange-500" />
           <QuickLink href="/hoa/fees"       icon={CreditCard} label="Fees & Payments"   color="bg-green-500" />
+          <QuickLink href="/hoa/active-terms"       icon={CalendarCheck} label="Active Terms"   color="bg-green-500" />
+
           <QuickLink href="/hoa/teachers"   icon={TrendingUp} label="Results Status"    color="bg-purple-500" />
         </div>
       </div>

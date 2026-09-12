@@ -1,95 +1,16 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import {
-  Eye, EyeOff, Lock, Mail,
-  Code2, KeyRound, GraduationCap, UserCog, User,
-} from 'lucide-react';
-
-// ─── Tab definitions ──────────────────────────────────────────────────────────
-const TABS = [
-  {
-    role:    'admin',
-    label:   'Admin',
-    Icon:    KeyRound,
-    color:   'blue',
-    accent:  'bg-blue-600',
-    ring:    'focus:ring-blue-400',
-    tab:     'text-blue-600 border-blue-600',
-    desc:    'Admin · HOA · Secretary',
-    gradient:'from-blue-600 to-blue-800',
-  },
-  {
-    role:    'principal',
-    label:   'Principal',
-    Icon:    UserCog,
-    color:   'emerald',
-    accent:  'bg-emerald-600',
-    ring:    'focus:ring-emerald-400',
-    tab:     'text-emerald-600 border-emerald-600',
-    desc:    'School management',
-    gradient:'from-emerald-600 to-emerald-800',
-  },
-  {
-    role:    'teacher',
-    label:   'Teacher',
-    Icon:    User,
-    color:   'orange',
-    accent:  'bg-orange-500',
-    ring:    'focus:ring-orange-400',
-    tab:     'text-orange-600 border-orange-500',
-    desc:    'Teaching staff',
-    gradient:'from-orange-500 to-orange-700',
-  },
-  {
-    role:    'student',
-    label:   'Student',
-    Icon:    GraduationCap,
-    color:   'rose',
-    accent:  'bg-rose-500',
-    ring:    'focus:ring-rose-400',
-    tab:     'text-rose-600 border-rose-500',
-    desc:    'Student portal',
-    gradient:'from-rose-500 to-rose-700',
-  },
-  {
-    role:    'developer',
-    label:   'Dev',
-    Icon:    Code2,
-    color:   'purple',
-    accent:  'bg-purple-600',
-    ring:    'focus:ring-purple-400',
-    tab:     'text-purple-600 border-purple-600',
-    desc:    'System developer',
-    gradient:'from-purple-600 to-purple-800',
-  },
-];
-
-const LOGIN_FN_MAP = {
-  admin:     'loginAdmin',
-  principal: 'loginPrincipal',
-  teacher:   'loginTeacher',
-  student:   'loginStudent',
-  developer: 'loginDeveloper',
-};
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 
 export function LoginPage() {
-  const { role: paramRole } = useParams();
   const navigate = useNavigate();
   const auth = useAuth();
 
-  const initialTab = TABS.find(t => t.role === paramRole) || TABS[0];
-  const [activeTab, setActiveTab] = useState(initialTab);
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading]   = useState(false);
   const [showPwd, setShowPwd]   = useState(false);
   const [error, setError]       = useState('');
-
-  const switchTab = (tab) => {
-    setActiveTab(tab);
-    setError('');
-    setCredentials({ email: '', password: '' });
-  };
 
   const handleChange = (e) => {
     setCredentials(p => ({ ...p, [e.target.name]: e.target.value }));
@@ -101,146 +22,147 @@ export function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const fnName = LOGIN_FN_MAP[activeTab.role] || 'loginAdmin';
-      const returnedUser = await auth[fnName](credentials);
-      const destRole = returnedUser?.role?.toLowerCase() || activeTab.role;
-      navigate(`/${destRole}/dashboard`);
+      const email = credentials.email.trim();
+      const password = credentials.password;
+
+      if (!email || !password) {
+        return setError('Email/Username and password are required');
+      }
+
+      let user = null;
+
+      try {
+        user = await auth.loginUnified({ email, password });
+      } catch {
+        try {
+          user = await auth.loginStudent({ username: email, password });
+        } catch {
+          setError('Invalid credentials. Check your email/username and password.');
+          return;
+        }
+      }
+
+      if (user) {
+        const destRole = (user.role || 'student').toLowerCase();
+        navigate(`/${destRole}/dashboard`);
+      } else {
+        setError('Invalid credentials.');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Check your credentials.');
+      setError(err.response?.data?.message || 'Login failed.');
     } finally {
       setLoading(false);
     }
   };
 
-  const isStudent = activeTab.role === 'student';
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex">
+      <div className="hidden lg:block lg:w-1/2 relative">
+        <img
+          src="https://images.unsplash.com/photo-1562774053-701939374585?w=1200&auto=format&fit=crop&q=80"
+          alt="School campus"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
 
-        {/* Card */}
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-
-          {/* Colored header strip */}
-          <div className={`bg-gradient-to-r ${activeTab.gradient} px-8 pt-8 pb-6 text-white transition-all duration-300`}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center">
-                <activeTab.Icon size={22} className="text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold leading-tight">SchoolMS</h1>
-                <p className="text-white/70 text-xs">{activeTab.desc}</p>
-              </div>
+        <div className="absolute inset-0 bg-slate-900/30" />
+        <div className="absolute bottom-12 left-12 right-12">
+          <p className="text-white/80 text-sm font-medium tracking-wide uppercase mb-2">Mercan Brilliant School (SMS)</p>
+          <h1 className="text-white text-3xl font-bold leading-tight">Manage your account<br />with confidence</h1>
+        </div>
+      </div>
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+          </div>
+          <span className="text-xs text-gray-400 uppercase tracking-wider">Enterprise</span>
+        </div>
+        <div className="flex-1 flex items-center justify-center px-8 py-12">
+          <div className="w-full max-w-sm">
+            <div className="mb-8">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Welcome back</p>
+              <h2 className="text-2xl font-bold text-gray-900">Sign in to your account</h2>
+              <p className="text-sm text-gray-500 mt-1">Enter your credentials to continue</p>
             </div>
-            <p className="text-white/90 text-base font-semibold">Sign in to your account</p>
-          </div>
 
-          {/* Tab bar */}
-          <div className="flex border-b border-gray-100 bg-gray-50 overflow-x-auto no-scrollbar">
-            {TABS.map(tab => (
-              <button
-                key={tab.role}
-                onClick={() => switchTab(tab)}
-                className={`flex-1 min-w-[64px] flex flex-col items-center gap-1 py-3 px-2 text-xs font-semibold transition-all border-b-2 ${
-                  activeTab.role === tab.role
-                    ? `${tab.tab} bg-white`
-                    : 'border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <tab.Icon size={16} />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Form */}
-          <div className="px-8 py-7">
             {error && (
-              <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-red-700 text-sm">{error}</p>
+              <div className="mb-5 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+                {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                  {isStudent ? 'Email Address' : 'Email Address'}
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Email or Username
                 </label>
                 <div className="relative">
-                  <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
-                    type="email"
+                    type="text"
                     name="email"
                     value={credentials.email}
                     onChange={handleChange}
                     required
-                    autoComplete="email"
+                    autoComplete="username"
                     placeholder="you@school.com"
-                    className={`w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 ${activeTab.ring} transition bg-white`}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition bg-white"
                   />
                 </div>
               </div>
 
-              {/* Password — hidden for student */}
-              {!isStudent && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Password</label>
-                  <div className="relative">
-                    <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    <input
-                      type={showPwd ? 'text' : 'password'}
-                      name="password"
-                      value={credentials.password}
-                      onChange={handleChange}
-                      required
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                      className={`w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 ${activeTab.ring} transition bg-white`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPwd(p => !p)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                    >
-                      {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                <div className="relative">
+                  <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type={showPwd ? 'text' : 'password'}
+                    name="password"
+                    value={credentials.password}
+                    onChange={handleChange}
+                    required
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
-              )}
+              </div>
 
-              {isStudent && (
-                <p className="text-xs text-gray-400 bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  Students log in using their email address only — no password needed.
-                </p>
-              )}
-
-              {activeTab.role === 'admin' && (
-                <p className="text-xs text-gray-400 bg-blue-50 rounded-xl p-3 border border-blue-100">
-                  Head of Activities and Secretary also log in here.
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full ${activeTab.accent} hover:opacity-90 text-white py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-sm mt-2`}
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    Signing in…
-                  </>
-                ) : (
-                  `Sign in as ${activeTab.label}`
-                )}
-              </button>
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-slate-700 hover:bg-slate-800 text-white py-2.5 text-sm font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Signing in…
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </button>
+              </div>
             </form>
 
-            <p className="text-center text-xs text-gray-400 mt-6">
-              © {new Date().getFullYear()} SchoolMS · All rights reserved
-            </p>
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <p className="text-xs text-gray-400">
+                Staff: use your school email. Students: use your registration username.
+              </p>
+            </div>
           </div>
+        </div>
+        <div className="px-8 py-4 border-t border-gray-100">
+          <p className="text-xs text-gray-400 text-center">
+            &copy; {new Date().getFullYear()} MBS ICT. All rights reserved.
+          </p>
         </div>
       </div>
     </div>

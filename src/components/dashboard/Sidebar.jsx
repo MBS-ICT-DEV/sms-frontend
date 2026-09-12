@@ -21,6 +21,7 @@ const NAV = {
   principal: [
     { name: 'Dashboard', path: '/dashboard', icon: <Home size={18} /> },
     { name: 'Register Student', path: '/principal/register-student', icon: <FileText size={18} /> },
+    { name: 'Fees', path: '/principal/fees', icon: <FileText size={18} /> },
     { name: 'Reports', path: '/principal/reports', icon: <BarChart3 size={18} /> },
   ],
   teacher: [

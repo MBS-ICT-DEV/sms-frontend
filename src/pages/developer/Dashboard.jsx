@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import {
   Shield, Users, BarChart3, Settings, LayoutDashboard,
   KeyRound, Download, RefreshCw, Eye, EyeOff, TriangleAlert, Trash2, FileDown,
+  MessageCircleIcon,
 } from 'lucide-react';
 
 const TABS = [
@@ -14,6 +15,7 @@ const TABS = [
   { id: 'key-access', label: 'Key Access', Icon: KeyRound },
   { id: 'export',     label: 'Export Staff', Icon: FileDown },
   { id: 'reset',      label: 'Reset',      Icon: TriangleAlert },
+  {id:'resetStudent', label:'Reset Optional Data', Icon:MessageCircleIcon}
 ];
 
 const ROLE_COLOR = {
@@ -670,7 +672,149 @@ function ResetTab() {
     </div>
   );
 }
+function ResetData() {
+    const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult]   = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
+    const handleResetData = async () => {
+    setLoading(true);
+    try {
+      const { data } = await adminAPI.resetStudentData();
+      setResult(data);
+      setShowModal(false);
+      setConfirm('');
+      toast.success('System reset successfully');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Reset failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+   return (
+    <div className="max-w-2xl space-y-5">
+
+      {/* Warning banner */}
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-4">
+        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+          <MessageCircleIcon size={20} className="text-red-600" />
+        </div>
+        <div>
+          <p className="font-bold text-red-700 text-sm mb-1">Danger Zone — Irreversible Action</p>
+          <p className="text-red-600 text-xs leading-relaxed">
+            This will permanently delete all school data and restore the system to its default state.
+            This action <strong>cannot be undone</strong>.
+          </p>
+        </div>
+      </div>
+
+      {/* What gets cleared */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <Trash2 size={15} className="text-red-500" /> What will be deleted
+          </p>
+          <ul className="space-y-1">
+            {WHAT_GETS_CLEARED.map(item => (
+              <li key={item} className="flex items-center gap-2 text-xs text-gray-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="border-t border-gray-100 pt-4">
+          <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <Shield size={15} className="text-emerald-500" /> What will be kept / restored
+          </p>
+          <ul className="space-y-1">
+            {WHAT_STAYS.map(item => (
+              <li key={item} className="flex items-center gap-2 text-xs text-gray-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Trigger button */}
+      <button
+        onClick={() => setShowModal(true)}
+        className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition"
+      >
+        <Trash2 size={16} /> Delete this data
+      </button>
+
+      {/* Success result */}
+      {result && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+          <p className="font-bold text-emerald-700 text-sm mb-3">✅ Reset completed</p>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(result.cleared || {}).map(([key, count]) => (
+              <div key={key} className="text-xs text-gray-600">
+                <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>: {count} deleted
+              </div>
+            ))}
+          </div>
+        
+        </div>
+      )}
+
+      {/* Confirmation modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                <TriangleAlert size={20} className="text-red-600" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900">Confirm Delete Request</p>
+                <p className="text-xs text-gray-500">This cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 leading-relaxed">
+              All selected data will be deleted. Type{' '}
+              <span className="font-mono font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">DELETE</span>{' '}
+              below to confirm.
+            </p>
+
+            <input
+              type="text"
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              placeholder="Type RESET to confirm"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => { setShowModal(false); setConfirm(''); }}
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetData}
+                disabled={confirm !== 'RESET' || loading}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+              >
+                {loading
+                  ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Resetting…</>
+                  : <><Trash2 size={15} /> Yes, Delete Everything</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 // ─── Dashboard Shell ──────────────────────────────────────────────────────────
 export default function DeveloperDashboard() {
   const { user } = useAuth();
@@ -713,6 +857,7 @@ export default function DeveloperDashboard() {
         {tab === 'key-access' && <KeyAccessTab />}
         {tab === 'export'     && <ExportStaffTab />}
         {tab === 'reset'      && <ResetTab />}
+        {tab === 'resetStudent' && <ResetData />}
 
       </div>
     </MainLayout>

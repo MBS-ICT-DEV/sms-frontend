@@ -4,9 +4,12 @@ import { toast } from 'react-toastify';
 import { Button, Modal, PageHeader, LoadingSpinner, EmptyState, Card } from './../components/common/UIComponents';
 import MainLayout from './../layouts/MainLayout';
 import principalAPI from './../api/principal.api';
-import { Edit2, Trash2, Plus, Search } from 'lucide-react';
+import { Edit2, Trash2, Plus, Search, CreditCard, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import feeAPI from '../api/fee.api';
 
 export default function StudentManagement() {
+  const { isPrincipal } = useAuth();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,13 +19,18 @@ export default function StudentManagement() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [viewMode, setViewMode] = useState('all');
+  const [departmentId, setDepartmentId] = useState('');
+  const [paymentSummary, setPaymentSummary] = useState(null);
 
   const [form, setForm] = useState({
     name: '',
     email: '',
     phone: '',
+    password: '',
+    classId: '',
     serialNumber: '',
     registrationNumber: '',
+    departmentId: '',
   });
 
   useEffect(() => {
@@ -64,6 +72,8 @@ export default function StudentManagement() {
       name: '',
       email: '',
       phone: '',
+      password: '',
+      classId: '',
       serialNumber: generateSerialNumber(),
       registrationNumber: generateRegistrationNumber(),
     });
@@ -77,6 +87,8 @@ export default function StudentManagement() {
       name: student.fullname || student.name || '',
       email: student.email || '',
       phone: student.phone || '',
+      password: '',
+      classId: student.class?._id || student.classId || '',
       serialNumber: student.serialNumber,
       registrationNumber: student.registrationNumber,
     });
@@ -92,6 +104,16 @@ export default function StudentManagement() {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
+    if (name === 'classId') {
+      const cls = classes.find(c => c._id === value);
+      if (cls && cls.department && cls.department._id) {
+        setDepartmentId(cls.department._id);
+        setForm(prev => ({ ...prev, departmentId: cls.department._id }));
+      } else {
+        setDepartmentId('');
+        setForm(prev => ({ ...prev, departmentId: '' }));
+      }
+    }
   };
 
   const validateForm = () => {
@@ -107,6 +129,10 @@ export default function StudentManagement() {
       toast.error('Invalid email format');
       return false;
     }
+    if (modalType === 'create' && !form.classId) {
+      toast.error('Please assign the student to a class');
+      return false;
+    }
     return true;
   };
 
@@ -118,9 +144,12 @@ export default function StudentManagement() {
       const response = await principalAPI.createStudent({
         fullname: form.name,
         email: form.email,
+        password: form.password || undefined,
+        classId: form.classId,
         phone: form.phone,
         serialNumber: form.serialNumber,
         registrationNumber: form.registrationNumber,
+        departmentId: form.departmentId,
       });
       toast.success(response.data.message || 'Student created successfully');
       setStudents([...students, response.data.student]);
@@ -242,6 +271,33 @@ export default function StudentManagement() {
           }
         />
 
+        {paymentSummary && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-3">
+              <CreditCard className="text-amber-600" size={24} />
+              <div>
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Total Balance</p>
+                <p className="text-xl font-bold text-amber-900">₦{paymentSummary.totalPaid.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="h-10 w-px bg-amber-200" />
+            <div>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Paid</p>
+              <p className="text-xl font-bold text-emerald-700">{paymentSummary.paidCount} students</p>
+            </div>
+            <div className="h-10 w-px bg-amber-200" />
+            <div>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Unpaid</p>
+              <p className="text-xl font-bold text-red-700">{paymentSummary.unpaidCount} students</p>
+            </div>
+            <div className="h-10 w-px bg-amber-200" />
+            <div>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Total Students</p>
+              <p className="text-xl font-bold text-slate-800">{paymentSummary.totalStudents}</p>
+            </div>
+          </div>
+        )}
+
         {/* Controls */}
         <div className="flex flex-col gap-4">
           <div className="flex gap-4 flex-wrap">
@@ -324,7 +380,7 @@ export default function StudentManagement() {
                       <td className="px-6 py-4 text-sm text-gray-900">{student.serialNumber}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{student.registrationNumber}</td>
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">{student.fullname || student.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{student.registrationNumber}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{student.email}</td>
                       <td className="px-6 py-4 text-sm">
                         <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
                           {studentClass?.name || 'Unassigned'}
@@ -417,6 +473,20 @@ export default function StudentManagement() {
                 required
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Class *</label>
+              <select name="classId" value={form.classId} onChange={handleFormChange} disabled={modalType === 'edit'} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Select a class</option>
+                {classes.map((schoolClass) => <option key={schoolClass._id} value={schoolClass._id}>{schoolClass.name}</option>)}
+              </select>
+            </div>
+
+            {modalType === 'create' && <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Temporary password</label>
+              <input type="password" name="password" value={form.password} onChange={handleFormChange} placeholder="Issue this securely to the student" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <p className="mt-1 text-xs text-gray-500">A username is generated automatically from the student's surname.</p>
+            </div>}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
