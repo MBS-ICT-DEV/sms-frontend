@@ -428,6 +428,7 @@ function SidebarContent({
       <nav
         className="
           flex-1
+          min-h-0
           overflow-y-auto
           px-3
           pb-4
@@ -1040,8 +1041,12 @@ export default function MainLayout({ children }) {
               {role}
             </p>
           </div>
+ 
 
+
+            
           {/* Top avatar */}
+
 
           <button
             type="button"
@@ -1065,6 +1070,8 @@ export default function MainLayout({ children }) {
           >
             {initials || <User size={16} />}
           </button>
+           {/* LogOut Feature */}
+             
         </header>
 
         {/* =================================================

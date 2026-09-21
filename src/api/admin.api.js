@@ -57,6 +57,9 @@ export const adminAPI = {
   getAllStudents: () =>
     apiClient.get("/admin/students"),
 
+  createStudent: (data) =>
+    apiClient.post("/students/create", data),
+
   getStudents: (params) =>
     apiClient.get("/admin/students", {
       params,

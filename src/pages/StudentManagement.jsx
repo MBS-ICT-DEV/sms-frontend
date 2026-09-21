@@ -33,6 +33,7 @@ export default function StudentManagement() {
     serialNumber: '',
     registrationNumber: '',
     departmentId: '',
+    sectionId: '',
   });
 
   const [phoneForm, setPhoneForm] = useState('');
@@ -81,6 +82,8 @@ export default function StudentManagement() {
       classId: '',
       serialNumber: generateSerialNumber(),
       registrationNumber: generateRegistrationNumber(),
+      departmentId: '',
+      sectionId: '',
     });
     setSelectedStudent(null);
     setModalType('create');
@@ -96,6 +99,8 @@ export default function StudentManagement() {
       classId: student.class?._id || student.classId || '',
       serialNumber: student.serialNumber,
       registrationNumber: student.registrationNumber,
+      departmentId: student.department?._id || '',
+      sectionId: student.class?.section?._id || '',
     });
     setModalType('edit');
   };
@@ -118,13 +123,16 @@ export default function StudentManagement() {
     setForm(prev => ({ ...prev, [name]: value }));
     if (name === 'classId') {
       const cls = classes.find(c => c._id === value);
-      if (cls && cls.department && cls.department._id) {
-        setDepartmentId(cls.department._id);
-        setForm(prev => ({ ...prev, departmentId: cls.department._id }));
-      } else {
-        setDepartmentId('');
-        setForm(prev => ({ ...prev, departmentId: '' }));
-      }
+      // The create endpoint requires the section alongside the class; the
+      // class list already carries it, so derive it from the selection.
+      const nextDepartmentId = cls?.department?._id || '';
+      const nextSectionId = cls?.section?._id || '';
+      setDepartmentId(nextDepartmentId);
+      setForm(prev => ({
+        ...prev,
+        departmentId: nextDepartmentId,
+        sectionId: nextSectionId,
+      }));
     }
   };
 
@@ -173,6 +181,7 @@ export default function StudentManagement() {
         email: form.email,
         password: form.password || undefined,
         classId: form.classId,
+        sectionId: form.sectionId,
         phoneNumber: normalizeNigerianPhone(form.phoneNumber),
         serialNumber: form.serialNumber,
         registrationNumber: form.registrationNumber,

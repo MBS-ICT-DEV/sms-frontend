@@ -1,8 +1,173 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import adminAPI from '../../api/admin.api';
-import { Users, Search, Trash2, X, Smartphone } from 'lucide-react';
+import { Users, Search, Trash2, X, Smartphone, Plus } from 'lucide-react';
 import { normalizeNigerianPhone, PHONE_VALIDATION_MESSAGE } from '../../utils/validation';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function CreateStudentModal({ classes, onClose, onCreated }) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phoneNumber: '',
+    password: '',
+    classId: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const selectedClass = classes.find((c) => c._id === form.classId);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+
+    if (!form.name.trim()) {
+      toast.error('Student name is required');
+      return;
+    }
+    if (!EMAIL_PATTERN.test(form.email.trim())) {
+      toast.error('Enter a valid email address');
+      return;
+    }
+    if (!form.classId) {
+      toast.error('Please assign the student to a class');
+      return;
+    }
+
+    const normalizedPhone = normalizeNigerianPhone(form.phoneNumber);
+    if (!normalizedPhone) {
+      toast.error(PHONE_VALIDATION_MESSAGE);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data } = await adminAPI.createStudent({
+        fullname: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password || undefined,
+        classId: form.classId,
+        sectionId: selectedClass?.section?._id || '',
+        departmentId: selectedClass?.department?._id || '',
+        phoneNumber: normalizedPhone,
+      });
+      toast.success(data.message || 'Student created successfully');
+      onCreated(data.student);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create student');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h3 className="font-bold text-gray-900">Create New Student</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Full Name *</label>
+            <input
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Enter student name"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Email *</label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Enter email address"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Class *</label>
+            <select
+              name="classId"
+              value={form.classId}
+              onChange={handleChange}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
+            >
+              <option value="">Select a class</option>
+              {classes.map((c) => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">
+              All classes are available, including primary and secondary.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Phone Number *</label>
+            <input
+              type="tel"
+              name="phoneNumber"
+              value={form.phoneNumber}
+              onChange={handleChange}
+              placeholder="e.g. 08012345678 or +2348012345678"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Used for attendance SMS alerts. Siblings may share one number.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Temporary Password</label>
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Issue this securely to the student"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              A username is generated automatically from the student's surname.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-medium disabled:opacity-60"
+            >
+              {saving ? 'Creating…' : 'Create Student'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 function PhoneModal({ student, onClose, onSaved }) {
   const [phone, setPhone] = useState(student.phoneNumber || '');
@@ -114,6 +279,7 @@ export default function HoaStudentsPage() {
   const [confirm, setConfirm]   = useState(null);
   const [phoneStudent, setPhoneStudent] = useState(null);
   const [onlyMissingPhone, setOnlyMissingPhone] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -175,12 +341,32 @@ export default function HoaStudentsPage() {
         />
       )}
 
+      {showCreate && (
+        <CreateStudentModal
+          classes={classes}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => {
+            setShowCreate(false);
+            fetchData();
+          }}
+        />
+      )}
+
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <Users size={22} className="text-teal-600" /> Students
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5">View all enrolled students and manage their records</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Users size={22} className="text-teal-600" /> Students
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">View all enrolled students and manage their records</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreate(true)}
+          className="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl px-4 py-2.5 text-sm font-medium"
+        >
+          <Plus size={16} /> Create Student
+        </button>
       </div>
 
       {/* Filters */}

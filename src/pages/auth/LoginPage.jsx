@@ -35,10 +35,14 @@ export function LoginPage() {
         user = await auth.loginUnified({ email, password });
       } catch {
         try {
-          user = await auth.loginStudent({ username: email, password });
+          user = await auth.loginDeveloper({ email, password });
         } catch {
-          setError('Invalid credentials. Check your email/username and password.');
-          return;
+          try {
+            user = await auth.loginStudent({ username: email, password });
+          } catch {
+            setError('Invalid credentials. Check your email/username and password.');
+            return;
+          }
         }
       }
 
