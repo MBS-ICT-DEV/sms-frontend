@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import MainLayout from '../layouts/MainLayout';
 import principalAPI from '../api/principal.api';
+import { normalizeNigerianPhone, PHONE_VALIDATION_MESSAGE } from '../utils/validation';
 
 const StatCard = ({ Icon, title, value, color, bg }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
@@ -57,8 +58,8 @@ export default function PrincipalDashboard() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [assignTeacher, setAssignTeacher] = useState([]);
 
-  const [studentForm, setStudentForm] = useState({ fullname: '', email: '', gender: '', classId: '' });
-  const [editForm, setEditForm] = useState({ fullname: '', gender: '' });
+  const [studentForm, setStudentForm] = useState({ fullname: '', email: '', gender: '', classId: '', phoneNumber: '' });
+  const [editForm, setEditForm] = useState({ fullname: '', gender: '', phoneNumber: '' });
   const [assignForm, setAssignForm] = useState({ classId: '', teacherId: '' });
   const [classForm, setClassForm] = useState({ name: '', capacity: '', sectionId: '' });
 
@@ -83,8 +84,8 @@ export default function PrincipalDashboard() {
   const closeModal = () => {
     setModal(null);
     setSelectedStudent(null);
-    setStudentForm({ fullname: '', email: '', gender: '', classId: '' });
-    setEditForm({ fullname: '', gender: '' });
+    setStudentForm({ fullname: '', email: '', gender: '', classId: '', phoneNumber: '' });
+    setEditForm({ fullname: '', gender: '', phoneNumber: '' });
     setAssignForm({ classId: '', teacherId: '' });
     setClassForm({ name: '', capacity: '', sectionId: '' });
   };
@@ -94,6 +95,10 @@ export default function PrincipalDashboard() {
     if (!studentForm.fullname.trim()) return toast.error('Full name is required');
     if (!studentForm.email.trim()) return toast.error('Email is required');
     if (!studentForm.classId) return toast.error('Please select a class');
+    // New students must carry a guardian number for attendance SMS alerts.
+    if (!String(studentForm.phoneNumber || '').trim()) return toast.error('Phone number is required');
+    const phoneNumber = normalizeNigerianPhone(studentForm.phoneNumber);
+    if (!phoneNumber) return toast.error(PHONE_VALIDATION_MESSAGE);
     try {
       setSubmitting(true);
       const selectedClass = classes.find(c => c._id === studentForm.classId);
@@ -101,6 +106,7 @@ export default function PrincipalDashboard() {
         ...studentForm,
         fullname: studentForm.fullname.trim(),
         email: studentForm.email.trim(),
+        phoneNumber,
         sectionId: selectedClass?.section?._id || '',
       });
       toast.success(res.data.message || 'Student created');
@@ -113,9 +119,13 @@ export default function PrincipalDashboard() {
   const handleEditStudent = async (e) => {
     e.preventDefault();
     if (!editForm.fullname.trim()) return toast.error('Full name is required');
+    // Phone stays optional on edit so an incorrect number can be removed.
+    const trimmedPhone = String(editForm.phoneNumber || '').trim();
+    const phoneNumber = trimmedPhone ? normalizeNigerianPhone(trimmedPhone) : '';
+    if (trimmedPhone && !phoneNumber) return toast.error(PHONE_VALIDATION_MESSAGE);
     try {
       setSubmitting(true);
-      const res = await principalAPI.updateStudent(selectedStudent._id, editForm);
+      const res = await principalAPI.updateStudent(selectedStudent._id, { ...editForm, phoneNumber });
       toast.success('Student updated');
       setStudents(p => p.map(s => s._id === selectedStudent._id ? { ...s, ...res.data.student } : s));
       closeModal();
@@ -155,7 +165,7 @@ export default function PrincipalDashboard() {
     finally { setSubmitting(false); }
   };
 
-  const openEdit = (s) => { setSelectedStudent(s); setEditForm({ fullname: s.fullname, gender: s.gender || '' }); setModal('edit'); };
+  const openEdit = (s) => { setSelectedStudent(s); setEditForm({ fullname: s.fullname, gender: s.gender || '', phoneNumber: s.phoneNumber || '' }); setModal('edit'); };
 
   return (
     <MainLayout>
@@ -317,6 +327,10 @@ export default function PrincipalDashboard() {
               {classes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </Field>
+          <Field label="Phone Number *">
+            <input className={inputCls} type="tel" placeholder="e.g. 08012345678 or +2348012345678" value={studentForm.phoneNumber} onChange={e => setStudentForm(p => ({ ...p, phoneNumber: e.target.value }))} />
+            <p className="mt-1 text-xs text-gray-500">Required. Used for attendance SMS alerts. Siblings may share one number.</p>
+          </Field>
           <div className="flex gap-3 mt-2">
             <button type="button" onClick={closeModal} className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">Cancel</button>
             <button type="submit" disabled={submitting} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2">
@@ -333,6 +347,10 @@ export default function PrincipalDashboard() {
             <select className={inputCls} value={editForm.gender} onChange={e => setEditForm(p => ({ ...p, gender: e.target.value }))}>
               <option value="">Select gender</option><option value="Male">Male</option><option value="Female">Female</option>
             </select>
+          </Field>
+          <Field label="Phone Number">
+            <input className={inputCls} type="tel" placeholder="e.g. 08012345678 or +2348012345678" value={editForm.phoneNumber} onChange={e => setEditForm(p => ({ ...p, phoneNumber: e.target.value }))} />
+            <p className="mt-1 text-xs text-gray-500">Leave empty to remove the number.</p>
           </Field>
           <div className="flex gap-3 mt-2">
             <button type="button" onClick={closeModal} className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">Cancel</button>

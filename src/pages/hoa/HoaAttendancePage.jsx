@@ -341,6 +341,20 @@ export default function HoaAttendancePage() {
           'Attendance saved successfully'
       );
 
+      // The backend reports per-student SMS delivery separately. Attendance is
+      // already saved, so a delivery failure is surfaced as a warning only.
+      const sms = response?.data?.sms;
+
+      if (sms && sms.failed > 0) {
+        toast.warning(
+          `${sms.failed} attendance SMS failed to send. Attendance was saved.`
+        );
+      } else if (sms && sms.skipped > 0 && sms.sent === 0) {
+        toast.info(
+          `${sms.skipped} record(s) skipped for SMS (no phone number or status not notified).`
+        );
+      }
+
       // Reset marks after successful save.
       const resetAttendance = {};
 

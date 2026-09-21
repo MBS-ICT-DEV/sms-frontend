@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PortalAssistant from '../components/PortalAssistant/PortalAssistant';
 
 import {
   LayoutDashboard,
@@ -1082,6 +1083,14 @@ export default function MainLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* =================================================
+          MBS PORTAL ASSISTANT
+          One instance for the whole portal. It is role-aware
+          through the existing authenticated session.
+      ================================================= */}
+
+      <PortalAssistant />
     </div>
   );
 }

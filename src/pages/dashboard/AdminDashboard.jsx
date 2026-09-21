@@ -4,6 +4,16 @@ import { toast } from 'react-toastify';
 import { Users, GraduationCap, BookOpen, TrendingUp, Plus, UserPlus, X, Loader2 } from 'lucide-react';
 import MainLayout from '../../layouts/MainLayout';
 import adminAPI from '../../api/admin.api';
+import { normalizeNigerianPhone, PHONE_VALIDATION_MESSAGE } from '../../utils/validation';
+
+// Staff phone numbers are optional, but a supplied value must be a valid
+// Nigerian number. It is normalized to +234... before it is sent.
+const normalizeOptionalPhone = (value) => {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return { phone: '' };
+  const normalized = normalizeNigerianPhone(trimmed);
+  return normalized ? { phone: normalized } : { error: PHONE_VALIDATION_MESSAGE };
+};
 
 const StatCard = ({ Icon, title, value, color, bg }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
@@ -86,9 +96,11 @@ export default function AdminDashboard() {
   const handleCreateTeacher = async (e) => {
     e.preventDefault();
     if (!teacherForm.fullname || !teacherForm.email || !teacherForm.password) return toast.error('Name, email and password are required');
+    const phone = normalizeOptionalPhone(teacherForm.phone);
+    if (phone.error) return toast.error(phone.error);
     try {
       setSubmitting(true);
-      const res = await adminAPI.createTeacher(teacherForm);
+      const res = await adminAPI.createTeacher({ ...teacherForm, phone: phone.phone });
       toast.success(res.data.message || 'Teacher created');
       setTeachers(p => [res.data.teacher, ...p]);
       closeModal();
@@ -99,9 +111,11 @@ export default function AdminDashboard() {
   const handleCreatePrincipal = async (e) => {
     e.preventDefault();
     if (!principalForm.fullname || !principalForm.email || !principalForm.password) return toast.error('Name, email and password are required');
+    const phone = normalizeOptionalPhone(principalForm.phone);
+    if (phone.error) return toast.error(phone.error);
     try {
       setSubmitting(true);
-      const res = await adminAPI.createPrincipal(principalForm);
+      const res = await adminAPI.createPrincipal({ ...principalForm, phone: phone.phone });
       toast.success(res.data.message || 'Principal created');
       closeModal();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
@@ -284,7 +298,7 @@ export default function AdminDashboard() {
           <Field label="Password *"><input className={inputCls} type="password" placeholder="Min. 6 characters" value={teacherForm.password} onChange={e => setTeacherForm(p => ({ ...p, password: e.target.value }))} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Subject"><input className={inputCls} placeholder="Mathematics" value={teacherForm.subject} onChange={e => setTeacherForm(p => ({ ...p, subject: e.target.value }))} /></Field>
-            <Field label="Phone"><input className={inputCls} placeholder="+234..." value={teacherForm.phone} onChange={e => setTeacherForm(p => ({ ...p, phone: e.target.value }))} /></Field>
+            <Field label="Phone"><input className={inputCls} type="tel" placeholder="e.g. 08012345678" value={teacherForm.phone} onChange={e => setTeacherForm(p => ({ ...p, phone: e.target.value }))} /></Field>
           </div>
           <div className="flex gap-3 mt-2">
             <button type="button" onClick={closeModal} className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">Cancel</button>
@@ -303,7 +317,7 @@ export default function AdminDashboard() {
           <Field label="Password *"><input className={inputCls} type="password" placeholder="Min. 6 characters" value={principalForm.password} onChange={e => setPrincipalForm(p => ({ ...p, password: e.target.value }))} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="School Name"><input className={inputCls} placeholder="School name" value={principalForm.schoolName} onChange={e => setPrincipalForm(p => ({ ...p, schoolName: e.target.value }))} /></Field>
-            <Field label="Phone"><input className={inputCls} placeholder="+234..." value={principalForm.phone} onChange={e => setPrincipalForm(p => ({ ...p, phone: e.target.value }))} /></Field>
+            <Field label="Phone"><input className={inputCls} type="tel" placeholder="e.g. 08012345678" value={principalForm.phone} onChange={e => setPrincipalForm(p => ({ ...p, phone: e.target.value }))} /></Field>
           </div>
           <div className="flex gap-3 mt-2">
             <button type="button" onClick={closeModal} className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">Cancel</button>

@@ -7,7 +7,6 @@ import {
   CheckSquare, UserX, TrendingUp, ArrowRight,
   CalendarCheck,
 } from 'lucide-react';
-import AIAssistant from '../../components/AIAssistant';
 
 function StatCard({ icon: Icon, label, value, color, sub }) {
   return (

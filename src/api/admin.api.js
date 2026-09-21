@@ -32,6 +32,11 @@ export const adminAPI = {
   createTeacher: (data) =>
     apiClient.post("/admin/create-teacher", data),
 
+  // Assign, update or clear the phone number of an existing staff account.
+  // Staff live in one collection per role, so the role travels in the body.
+  assignStaffPhone: (id, role, phone) =>
+    apiClient.put(`/admin/staff/${id}/phone`, { role, phone }),
+
   getAllTeachers: () => apiClient.get("/admin/teachers"),
 
   getTeachersResultStatus: (params) =>
@@ -56,6 +61,10 @@ export const adminAPI = {
     apiClient.get("/admin/students", {
       params,
     }),
+
+  // Reuses the existing student update route (PRINCIPAL/ADMIN/DEVELOPER/HOA).
+  updateStudent: (id, data) =>
+    apiClient.put(`/students/${id}`, data),
 
   deleteStudent: (id) =>
     apiClient.delete(`/admin/students/${id}`),
@@ -307,6 +316,15 @@ submitTermResults: (id) =>
   getAttendanceView: (params) =>
     apiClient.get(
       "/admin/attendance",
+      {
+        params,
+      }
+    ),
+
+  // Individual attendance record for one student (SMS alert source)
+  getStudentAttendance: (studentId, params) =>
+    apiClient.get(
+      `/admin/attendance/student/${studentId}`,
       {
         params,
       }

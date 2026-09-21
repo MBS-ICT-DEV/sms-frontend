@@ -2,6 +2,38 @@
  * Validation utilities for all forms
  */
 
+/*
+ * Nigerian phone numbers, mirrors the backend rules in
+ * sms-backend/utils/phone.js. Accepted inputs:
+ *   08012345678 | 8012345678 | +2348012345678 | 2348012345678
+ * Spaces, dashes and parentheses are ignored. Every accepted value is
+ * normalized to E.164 (+2348012345678) before it is sent to the API.
+ * Phone numbers are never unique — siblings may share one guardian number.
+ */
+const LOCAL_NUMBER_PATTERN = /^0[789]\d{9}$/;
+const LOCAL_NUMBER_WITHOUT_ZERO_PATTERN = /^[789]\d{9}$/;
+const INTERNATIONAL_NUMBER_PATTERN = /^234[789]\d{9}$/;
+
+export const PHONE_VALIDATION_MESSAGE =
+  'Enter a valid Nigerian phone number (e.g. 08012345678 or +2348012345678)';
+
+export const normalizeNigerianPhone = (value) => {
+  if (value === null || value === undefined) return null;
+
+  const digits = String(value).replace(/[^\d+]/g, '').replace(/\+/g, '');
+
+  if (!digits) return null;
+
+  if (LOCAL_NUMBER_PATTERN.test(digits)) return `+234${digits.slice(1)}`;
+  if (LOCAL_NUMBER_WITHOUT_ZERO_PATTERN.test(digits)) return `+234${digits}`;
+  if (INTERNATIONAL_NUMBER_PATTERN.test(digits)) return `+${digits}`;
+
+  return null;
+};
+
+export const isValidNigerianPhone = (value) =>
+  normalizeNigerianPhone(value) !== null;
+
 export const validators = {
   // Email validation
   email: (value) => {
@@ -16,10 +48,20 @@ export const validators = {
     return true;
   },
 
-  // Phone validation
+  // Phone validation (Nigerian format, normalized to E.164 on submit)
   phone: (value) => {
-    const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
-    return phoneRegex.test(value) || 'Invalid phone number';
+    if (value === null || value === undefined || String(value).trim() === '') {
+      return 'Phone number is required';
+    }
+    return isValidNigerianPhone(value) || PHONE_VALIDATION_MESSAGE;
+  },
+
+  // Optional phone: empty is valid, anything else must be a Nigerian number
+  optionalPhone: (value) => {
+    if (value === null || value === undefined || String(value).trim() === '') {
+      return true;
+    }
+    return isValidNigerianPhone(value) || PHONE_VALIDATION_MESSAGE;
   },
 
   // Name validation (alphabetic + spaces)
@@ -195,6 +237,7 @@ export const validationSchemas = {
     firstName: [validators.required, validators.name],
     lastName: [validators.required, validators.name],
     email: [validators.required, validators.email],
+    phoneNumber: [validators.phone],
     classId: [validators.required],
   },
 
@@ -231,4 +274,7 @@ export default {
   getFieldError,
   hasFieldError,
   validationSchemas,
+  normalizeNigerianPhone,
+  isValidNigerianPhone,
+  PHONE_VALIDATION_MESSAGE,
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { User, GraduationCap, BookOpen, Hash, Mail, Loader2 } from 'lucide-react';
+import { User, GraduationCap, BookOpen, Hash, Mail, Loader2, Phone } from 'lucide-react';
 import MainLayout from '../layouts/MainLayout';
 import authAPI from '../api/auth.api';
 
@@ -21,6 +21,6 @@ export default function ProfilePage() {
     {!profile && !error && <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" /></div>}
     {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
     {profile && <><section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center gap-4"><div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-700"><User size={30} /></div><div><h2 className="text-xl font-bold text-slate-900">{profile.fullname}</h2><p className="capitalize text-sm text-slate-500">{profile.role}</p></div></div></section>
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2"><Item icon={Mail} label="Email" value={profile.email} /><Item icon={Hash} label="Username" value={profile.username} /><Item icon={Hash} label="Registration number" value={profile.registrationNumber} /><Item icon={GraduationCap} label="Current class" value={profile.class?.name} /><Item icon={BookOpen} label="Section" value={profile.class?.section?.name} /><Item icon={BookOpen} label="Department" value={profile.class?.department?.name} /><Item icon={User} label="Class teacher" value={profile.class?.classTeacher?.fullname} /><Item icon={GraduationCap} label="Assigned class" value={profile.assignedClass?.name} /></section></>}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2"><Item icon={Mail} label="Email" value={profile.email} /><Item icon={Phone} label="Phone number" value={profile.phone || profile.phoneNumber} /><Item icon={Hash} label="Username" value={profile.username} /><Item icon={Hash} label="Registration number" value={profile.registrationNumber} /><Item icon={GraduationCap} label="Current class" value={profile.class?.name} /><Item icon={BookOpen} label="Section" value={profile.class?.section?.name} /><Item icon={BookOpen} label="Department" value={profile.class?.department?.name} /><Item icon={User} label="Class teacher" value={profile.class?.classTeacher?.fullname} /><Item icon={GraduationCap} label="Assigned class" value={profile.assignedClass?.name} /></section></>}
   </div></MainLayout>;
 }

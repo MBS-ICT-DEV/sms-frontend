@@ -35,6 +35,11 @@ apiClient.interceptors.response.use(
       const status = error.response.status;
       const data = error.response.data;
 
+      // Callers may opt out of the global toast (e.g. the portal assistant
+      // renders its own inline error state and message).
+      const skipErrorToast =
+        error.config?.skipErrorToast === true;
+
       switch (status) {
         case 400:
           message = data.message || 'Bad request. Please check your input.';
@@ -68,7 +73,7 @@ apiClient.interceptors.response.use(
       }
 
       // Show error toast - skip 400 and 401 (handled by components or redirect)
-      if (status !== 401 && status !== 400) {
+      if (!skipErrorToast && status !== 401 && status !== 400) {
         toast.error(message, {
           position: 'top-right',
           autoClose: 3000,
@@ -76,16 +81,20 @@ apiClient.interceptors.response.use(
       }
     } else if (error.request) {
       message = 'No response from server. Please check your connection.';
-      toast.error(message, {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      if (error.config?.skipErrorToast !== true) {
+        toast.error(message, {
+          position: 'top-right',
+          autoClose: 3000,
+        });
+      }
     } else {
       message = error.message || 'An unexpected error occurred';
-      toast.error(message, {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      if (error.config?.skipErrorToast !== true) {
+        toast.error(message, {
+          position: 'top-right',
+          autoClose: 3000,
+        });
+      }
     }
 
     return Promise.reject(error);

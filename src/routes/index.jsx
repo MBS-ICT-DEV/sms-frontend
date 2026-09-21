@@ -3,13 +3,11 @@ import {
   Routes,
   Route,
   Navigate,
-  useLocation,
 } from "react-router-dom";
 
 import { ProtectedRoute } from "./ProtectedRoute";
 import { useAuth } from "../context/AuthContext";
 import MainLayout from "../layouts/MainLayout";
-import AIAssistant from "../components/AIAssistant";
 import ProfilePage from "../pages/ProfilePage";
 import AnnouncementPage from "../pages/AnnouncementPage";
 
@@ -94,25 +92,6 @@ import { StudentResultsPage } from "../pages/result/StudentResultsPage";
 import PrincipalResultsApproval from "../pages/PrincipalResultsApproval";
 import PrincipalGenerateBroadsheet from "../pages/PrincipalGenerateBroadsheet";
 import PrincipalGenerateCumulative from "../pages/PrincipalGenerateCumulative";
-
-// ============================================================
-// GLOBAL AI ASSISTANT
-// ============================================================
-
-function GlobalAIAssistant() {
-  const location = useLocation();
-
-  const isLoginPage =
-    location.pathname === "/login" ||
-    location.pathname.startsWith("/login/");
-
-  // Don't show AI assistant on login pages
-  if (isLoginPage) {
-    return null;
-  }
-
-  return <AIAssistant />;
-}
 
 // ============================================================
 // APPLICATION ROUTES
@@ -559,9 +538,6 @@ export default function Router() {
   return (
     <BrowserRouter>
       <AppRoutes />
-
-      {/* One AI assistant instance for the entire portal */}
-      <GlobalAIAssistant />
     </BrowserRouter>
   );
 }

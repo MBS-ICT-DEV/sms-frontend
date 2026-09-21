@@ -4,9 +4,11 @@ import { toast } from 'react-toastify';
 import { Button, Modal, PageHeader, LoadingSpinner, EmptyState, Card } from './../components/common/UIComponents';
 import MainLayout from './../layouts/MainLayout';
 import principalAPI from './../api/principal.api';
+import adminAPI from './../api/admin.api';
 import { Edit2, Trash2, Plus, Search, CreditCard, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import feeAPI from '../api/fee.api';
+import { normalizeNigerianPhone, PHONE_VALIDATION_MESSAGE } from '../utils/validation';
 
 export default function StudentManagement() {
   const { isPrincipal } = useAuth();
@@ -25,13 +27,16 @@ export default function StudentManagement() {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    phone: '',
+    phoneNumber: '',
     password: '',
     classId: '',
     serialNumber: '',
     registrationNumber: '',
     departmentId: '',
   });
+
+  const [phoneForm, setPhoneForm] = useState('');
+  const [onlyMissingPhone, setOnlyMissingPhone] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -71,7 +76,7 @@ export default function StudentManagement() {
     setForm({
       name: '',
       email: '',
-      phone: '',
+      phoneNumber: '',
       password: '',
       classId: '',
       serialNumber: generateSerialNumber(),
@@ -86,7 +91,7 @@ export default function StudentManagement() {
     setForm({
       name: student.fullname || student.name || '',
       email: student.email || '',
-      phone: student.phone || '',
+      phoneNumber: student.phoneNumber || '',
       password: '',
       classId: student.class?._id || student.classId || '',
       serialNumber: student.serialNumber,
@@ -99,6 +104,13 @@ export default function StudentManagement() {
     setSelectedStudent(student);
     setSelectedClass('');
     setModalType('assign');
+  };
+
+  // Existing students created before phone support have no number yet.
+  const openAssignPhoneModal = (student) => {
+    setSelectedStudent(student);
+    setPhoneForm(student.phoneNumber || '');
+    setModalType('assignPhone');
   };
 
   const handleFormChange = (e) => {
@@ -133,6 +145,21 @@ export default function StudentManagement() {
       toast.error('Please assign the student to a class');
       return false;
     }
+
+    // New students must carry a guardian number for attendance SMS alerts.
+    // On edit an empty value is allowed so an incorrect number can be removed.
+    const phone = String(form.phoneNumber || '').trim();
+
+    if (modalType === 'create' && !phone) {
+      toast.error('Phone number is required');
+      return false;
+    }
+
+    if (phone && !normalizeNigerianPhone(phone)) {
+      toast.error(PHONE_VALIDATION_MESSAGE);
+      return false;
+    }
+
     return true;
   };
 
@@ -146,7 +173,7 @@ export default function StudentManagement() {
         email: form.email,
         password: form.password || undefined,
         classId: form.classId,
-        phone: form.phone,
+        phoneNumber: normalizeNigerianPhone(form.phoneNumber),
         serialNumber: form.serialNumber,
         registrationNumber: form.registrationNumber,
         departmentId: form.departmentId,
@@ -157,7 +184,7 @@ export default function StudentManagement() {
       setForm({
         name: '',
         email: '',
-        phone: '',
+        phoneNumber: '',
         serialNumber: '',
         registrationNumber: '',
       });
@@ -176,7 +203,9 @@ export default function StudentManagement() {
       const response = await principalAPI.updateStudent(selectedStudent._id, {
         fullname: form.name,
         email: form.email,
-        phone: form.phone,
+        phoneNumber: String(form.phoneNumber || '').trim()
+          ? normalizeNigerianPhone(form.phoneNumber)
+          : '',
       });
       toast.success(response.data.message || 'Student updated successfully');
       const updatedStudents = students.map(s =>
@@ -219,6 +248,43 @@ export default function StudentManagement() {
     }
   };
 
+  // Assign or update a student's guardian phone number.
+  // The number is intentionally not unique: siblings may share one number.
+  const handleAssignPhone = async () => {
+    const phone = String(phoneForm || '').trim();
+    const normalized = phone ? normalizeNigerianPhone(phone) : '';
+
+    if (phone && !normalized) {
+      toast.error(PHONE_VALIDATION_MESSAGE);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const response = await adminAPI.updateStudent(selectedStudent._id, {
+        fullname: selectedStudent.fullname,
+        email: selectedStudent.email,
+        phoneNumber: normalized,
+      });
+      toast.success(
+        normalized
+          ? 'Phone number assigned successfully'
+          : 'Phone number cleared successfully'
+      );
+      const updated = response.data.student;
+      setStudents((prev) =>
+        prev.map((s) => (s._id === selectedStudent._id ? { ...s, ...updated } : s))
+      );
+      setModalType(null);
+      setSelectedStudent(null);
+      setPhoneForm('');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save phone number');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleDelete = async (studentId) => {
     if (!window.confirm('Are you sure you want to delete this student?')) return;
 
@@ -233,11 +299,16 @@ export default function StudentManagement() {
 
   const filteredStudents = students.filter(student => {
     const query = search.toLowerCase();
-    return (
+    const matchesSearch =
       (student.fullname || student.name || '').toLowerCase().includes(query) ||
       (student.serialNumber || '').toLowerCase().includes(query) ||
-      (student.registrationNumber || '').toLowerCase().includes(query)
-    );
+      (student.registrationNumber || '').toLowerCase().includes(query);
+
+    // Existing records may predate phone support, so an admin can isolate
+    // the students that still need a number assigned.
+    const matchesPhoneFilter = !onlyMissingPhone || !student.phoneNumber;
+
+    return matchesSearch && matchesPhoneFilter;
   });
 
   const getClassStudents = () => {
@@ -311,6 +382,19 @@ export default function StudentManagement() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setOnlyMissingPhone((prev) => !prev)}
+              className={`px-4 py-2 rounded-lg font-medium transition border ${
+                onlyMissingPhone
+                  ? 'bg-amber-100 text-amber-800 border-amber-300'
+                  : 'bg-gray-100 text-gray-700 border-transparent hover:bg-gray-200'
+              }`}
+            >
+              {onlyMissingPhone
+                ? `Missing phone (${students.filter((s) => !s.phoneNumber).length})`
+                : 'Show missing phone only'}
+            </button>
             <div className="flex gap-2">
               <button
                 onClick={() => setViewMode('all')}
@@ -362,6 +446,7 @@ export default function StudentManagement() {
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Registration Number</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Class</th>
                   <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
@@ -382,6 +467,15 @@ export default function StudentManagement() {
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">{student.fullname || student.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{student.email}</td>
                       <td className="px-6 py-4 text-sm">
+                        {student.phoneNumber ? (
+                          <span className="text-gray-900 font-mono text-xs">{student.phoneNumber}</span>
+                        ) : (
+                          <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
+                            Not assigned
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
                         <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
                           {studentClass?.name || 'Unassigned'}
                         </span>
@@ -401,6 +495,13 @@ export default function StudentManagement() {
                             title="Assign to Class"
                           >
                             📚
+                          </button>
+                          <button
+                            onClick={() => openAssignPhoneModal(student)}
+                            className="p-2 hover:bg-teal-100 text-teal-600 rounded transition"
+                            title={student.phoneNumber ? 'Update phone number' : 'Assign phone number'}
+                          >
+                            📱
                           </button>
                           <button
                             onClick={() => handleDelete(student._id)}
@@ -489,15 +590,22 @@ export default function StudentManagement() {
             </div>}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number {modalType === 'create' ? '*' : ''}
+              </label>
               <input
                 type="tel"
-                name="phone"
-                value={form.phone}
+                name="phoneNumber"
+                value={form.phoneNumber}
                 onChange={handleFormChange}
-                placeholder="Enter phone number"
+                placeholder="e.g. 08012345678 or +2348012345678"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                {modalType === 'create'
+                  ? 'Required. Used for attendance SMS alerts. Siblings may share one number.'
+                  : 'Leave empty to remove the number. Siblings may share one number.'}
+              </p>
             </div>
 
             <div className="flex gap-3 justify-end pt-4 border-t">
@@ -558,6 +666,57 @@ export default function StudentManagement() {
                 disabled={submitting}
               >
                 {submitting ? <LoadingSpinner size="sm" /> : 'Assign'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Assign / Update Phone Number Modal */}
+        <Modal
+          isOpen={modalType === 'assignPhone'}
+          onClose={() => { setModalType(null); setSelectedStudent(null); setPhoneForm(''); }}
+          title={selectedStudent?.phoneNumber ? 'Update Phone Number' : 'Assign Phone Number'}
+        >
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleAssignPhone(); }}>
+            <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
+              <p className="text-sm font-semibold text-gray-900">
+                {selectedStudent?.fullname || selectedStudent?.name}
+              </p>
+              <p className="mt-0.5 text-xs text-gray-500 font-mono">
+                {selectedStudent?.registrationNumber}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={phoneForm}
+                onChange={(e) => setPhoneForm(e.target.value)}
+                placeholder="e.g. 08012345678 or +2348012345678"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                The same number can be assigned to more than one student.
+              </p>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4 border-t">
+              <Button
+                variant="secondary"
+                onClick={() => { setModalType(null); setSelectedStudent(null); setPhoneForm(''); }}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                disabled={submitting}
+              >
+                {submitting ? <LoadingSpinner size="sm" /> : 'Save'}
               </Button>
             </div>
           </form>
