@@ -63,6 +63,9 @@ export const teacherAPI = {
   getAssignments: () =>
     apiClient.get('/teacher/assignments'),
 
+  getAssignment: (assignmentId) =>
+    apiClient.get(`/teacher/assignments/` + assignmentId),
+
   getAssignmentSubmissions: (assignmentId) =>
     apiClient.get(`/submissions/assignment/${assignmentId}`),
 

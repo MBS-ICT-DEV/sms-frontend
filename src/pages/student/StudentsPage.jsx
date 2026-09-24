@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button, Modal, PageHeader } from '../../components/common/UIComponents';
+import StudentIdCard from '../../components/StudentIdCard';
 import toast from 'react-hot-toast';
 
 const STUDENTS = [
@@ -98,6 +99,9 @@ export const StudentsPage = () => {
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{selected.class} · {selected.gender}</div>
             </div>
           </div>
+
+          <StudentIdCard student={selected} />
+
           {[
             ['Serial Number', selected.serial],
             ['Registration Number', selected.reg],

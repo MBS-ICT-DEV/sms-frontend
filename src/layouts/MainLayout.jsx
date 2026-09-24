@@ -21,6 +21,7 @@ import {
   ChevronRight,
   CreditCard,
   User,
+  UsersRound,
   School,
   ClipboardCheck,
   Megaphone,
@@ -222,6 +223,11 @@ const NAV = {
       label: 'Assignments',
       href: '/student/assignments',
       Icon: ClipboardList,
+    },
+    {
+      label: 'My Groups',
+      href: '/student/groups',
+      Icon: UsersRound,
     },
     {
       label: 'Attendance',
@@ -641,7 +647,15 @@ function SidebarContent({
               shadow-sm
             `}
           >
-            {initials || <User size={16} />}
+            {user?.profileImage ? (
+              <img
+                src={user.profileImage}
+                alt={user?.fullname || 'User'}
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              initials || <User size={16} />
+            )}
           </button>
 
           {/* User info */}
@@ -1068,7 +1082,15 @@ export default function MainLayout({ children }) {
               cursor-pointer
             `}
           >
-            {initials || <User size={16} />}
+            {user?.profileImage ? (
+              <img
+                src={user.profileImage}
+                alt={user?.fullname || 'User'}
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              initials || <User size={16} />
+            )}
           </button>
            {/* LogOut Feature */}
              

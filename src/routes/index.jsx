@@ -16,7 +16,7 @@ import AnnouncementPage from "../pages/AnnouncementPage";
 // ============================================================
 
 import { LoginPage } from "../pages/auth/LoginPage";
-
+import WhatsAppDevPage from "../pages/WhatsAppDevPage";
 // ============================================================
 // DASHBOARDS
 // ============================================================
@@ -74,6 +74,8 @@ import StudentManagement from "../pages/StudentManagement";
 
 import ResultsUpload from "../pages/teacher/ResultsUpload";
 import UploadAssignment from "../pages/teacher/UploadAssignment";
+import AssignmentResults from "../pages/teacher/AssignmentResults";
+import GroupManager from "../pages/group/GroupManager";
 import MarkAttendance from "../pages/teacher/MarkAttendance";
 
 // ============================================================
@@ -81,6 +83,9 @@ import MarkAttendance from "../pages/teacher/MarkAttendance";
 // ============================================================
 
 import ViewAssignments from "../pages/student/ViewAssignments";
+import AssignmentWorkspace from "../pages/student/AssignmentWorkspace";
+import MyGroups from "../pages/student/MyGroups";
+import GroupWorkspace from "../pages/group/GroupWorkspace";
 import ViewAttendance from "../pages/student/ViewAttendance";
 import DownloadReportCard from "../pages/student/DownloadReportCard";
 import { StudentResultsPage } from "../pages/result/StudentResultsPage";
@@ -120,7 +125,10 @@ export function AppRoutes() {
           )
         }
       />
-
+<Route
+  path="/dev"
+  element={<WhatsAppDevPage />}
+/>
       <Route
         path="/login"
         element={
@@ -317,6 +325,24 @@ export function AppRoutes() {
       />
 
       <Route
+        path="/teacher/assignments/:assignmentId/results"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <AssignmentResults />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/teacher/assignments/:assignmentId/groups"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <GroupManager />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/teacher/attendance"
         element={
           <ProtectedRoute requiredRole="teacher">
@@ -374,6 +400,33 @@ export function AppRoutes() {
         element={
           <ProtectedRoute requiredRole="student">
             <ViewAssignments />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/student/assignments/:assignmentId"
+        element={
+          <ProtectedRoute requiredRole="student">
+            <AssignmentWorkspace />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/student/groups"
+        element={
+          <ProtectedRoute requiredRole="student">
+            <MyGroups />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/group/:groupId"
+        element={
+          <ProtectedRoute requiredRole={['teacher', 'student']}>
+            <GroupWorkspace />
           </ProtectedRoute>
         }
       />

@@ -34,6 +34,40 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  // ========================
+  // HYDRATE SESSION
+  // ========================
+  // Pull the latest profile fields (notably profileImage) after a refresh or
+  // a fresh login so the navbar/sidebar avatar always reflects the saved
+  // picture.
+  useEffect(() => {
+    if (!token) return undefined;
+
+    let active = true;
+    authAPI.getProfile()
+      .then(({ data }) => {
+        const profile = data?.profile;
+        if (!active || !profile) return;
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = {
+            ...prev,
+            fullname: profile.fullname ?? prev.fullname,
+            email: profile.email ?? prev.email,
+            phone: profile.phone ?? prev.phone,
+            profileImage: profile.profileImage ?? prev.profileImage,
+          };
+          localStorage.setItem('user', JSON.stringify(next));
+          return next;
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
   // ✅ Save session
   const saveSession = (authToken, userData) => {
     // Normalize role to lowercase to prevent case-sensitivity bugs in routing/menus
@@ -148,6 +182,20 @@ export const AuthProvider = ({ children }) => {
   // ========================
   // FINAL CONTEXT VALUE
   // ========================
+  // ========================
+  // UPDATE LOCAL USER
+  // ========================
+  // Keeps the session (sidebar, navbar, localStorage) in sync after the
+  // signed-in user edits their own profile.
+  const updateUser = (partial) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...partial, role: (partial.role || prev.role)?.toLowerCase() };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -163,6 +211,7 @@ export const AuthProvider = ({ children }) => {
         loginStudent,
         loginUnified,
         logout,
+        updateUser,
 
         isAuthenticated: !!user,
 

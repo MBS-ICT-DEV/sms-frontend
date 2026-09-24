@@ -10,6 +10,10 @@ export const authAPI = {
   loginStudent:   (credentials) => apiClient.post('/auth/student/login',   credentials),
   unifiedLogin:   (credentials) => apiClient.post('/auth/login',           credentials),
   getProfile: () => apiClient.get('/auth/profile'),
+  updateProfile: (payload) => apiClient.put('/auth/profile', payload),
+  uploadProfileImage: (formData) => apiClient.post('/auth/profile/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 export default authAPI;

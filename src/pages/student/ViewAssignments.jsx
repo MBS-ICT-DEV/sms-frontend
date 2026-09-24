@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../layouts/MainLayout';
 import { studentAPI } from '../../api/student.api';
 import { toast } from 'react-toastify';
-import { Download, Calendar, BookOpen, Loader2, Upload, File, Lock, CheckCircle, X } from 'lucide-react';
+import { Download, Calendar, BookOpen, Loader2, Upload, File, Lock, CheckCircle, X, Award, Clock, PlayCircle } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
 function SubmitModal({ assignment, onClose, onSubmitted }) {
@@ -89,6 +90,7 @@ function SubmitModal({ assignment, onClose, onSubmitted }) {
 }
 
 export default function ViewAssignments() {
+  const navigate = useNavigate();
   const [assignments,    setAssignments]    = useState([]);
   const [submissionMap,  setSubmissionMap]  = useState({});
   const [loading,        setLoading]        = useState(true);
@@ -159,9 +161,25 @@ export default function ViewAssignments() {
                         <h3 className="font-bold text-gray-900 truncate">{a.title}</h3>
                         {/* Status badge */}
                         {submitted ? (
-                          <span className="flex items-center gap-1 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                            <CheckCircle size={11} /> Submitted
-                          </span>
+                          <>
+                            <span className="flex items-center gap-1 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                              <CheckCircle size={11} /> Submitted
+                            </span>
+                            {submission.status === 'graded' ? (
+                              <span className="flex items-center gap-1 text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                <Award size={11} /> Marked
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                                <Clock size={11} /> Awaiting mark
+                              </span>
+                            )}
+                            {submission.score != null && submission.maxScore != null && (
+                              <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                {submission.score}/{submission.maxScore}
+                              </span>
+                            )}
+                          </>
                         ) : overdue ? (
                           <span className="flex items-center gap-1 text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
                             <Lock size={11} /> Closed
@@ -205,13 +223,33 @@ export default function ViewAssignments() {
                         </a>
                       )}
 
-                      {/* Submit button — only if open and not yet submitted */}
-                      {!submitted && !overdue && (
+                      {/* Open the workspace to answer or review the marked result */}
+                      {submitted && (
+                        <button
+                          onClick={() => navigate('/student/assignments/' + a._id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition"
+                        >
+                          <Award size={12} /> View result
+                        </button>
+                      )}
+
+                      {/* Plain upload assignments keep the original one-file modal */}
+                      {!submitted && !overdue && (a.submissionType || 'upload') === 'upload' && (
                         <button
                           onClick={() => setSubmitTarget(a)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition"
                         >
                           <Upload size={12} /> Submit
+                        </button>
+                      )}
+
+                      {/* Interactive / text / mixed assignments open the workspace */}
+                      {!submitted && !overdue && (a.submissionType || 'upload') !== 'upload' && (
+                        <button
+                          onClick={() => navigate('/student/assignments/' + a._id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition"
+                        >
+                          <PlayCircle size={12} /> Start
                         </button>
                       )}
 
